@@ -24,6 +24,17 @@ function App() {
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    ws.onmessage = (event) => {
+      const message: Message = JSON.parse(event.data);
+      if (message.type === "draw") {
+        const { startX, startY, endX, endY } = message.payload;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+    };
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -46,7 +57,7 @@ function App() {
       payload,
     };
 
-    // ws.send()
+    ws.send(JSON.stringify(message));
 
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
