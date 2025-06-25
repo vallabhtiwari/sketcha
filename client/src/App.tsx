@@ -39,19 +39,25 @@ function App() {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDrawing(true);
-    setPrev({ x: e.clientX, y: e.clientY });
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setPrev({ x, y });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDrawing || !prev) return;
 
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
     const payload = {
       startX: prev.x,
       startY: prev.y,
-      endX: e.clientX,
-      endY: e.clientY,
+      endX: x,
+      endY: y,
     };
-
     const message = {
       type: "draw",
       payload,
@@ -66,7 +72,8 @@ function App() {
       ctx.lineTo(payload.endX, payload.endY);
       ctx.stroke();
     }
-    setPrev({ x: e.clientX, y: e.clientY });
+
+    setPrev({ x, y });
   };
 
   const handleMouseUp = () => {
