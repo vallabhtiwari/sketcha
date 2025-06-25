@@ -1,35 +1,76 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import "./App.css";
 
+const ws = new WebSocket("ws://localhost:8080");
+type DrawPayload = {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+};
+type Message = {
+  type: "draw";
+  payload: DrawPayload;
+};
 function App() {
-  const [count, setCount] = useState(0)
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [prev, setPrev] = useState<{ x: number; y: number } | null>(null);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDrawing(true);
+    setPrev({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDrawing || !prev) return;
+
+    const payload = {
+      startX: prev.x,
+      startY: prev.y,
+      endX: e.clientX,
+      endY: e.clientY,
+    };
+
+    const message = {
+      type: "draw",
+      payload,
+    };
+
+    // ws.send()
+
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.beginPath();
+      ctx.moveTo(payload.startX, payload.startY);
+      ctx.lineTo(payload.endX, payload.endY);
+      ctx.stroke();
+    }
+    setPrev({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDrawing(false);
+    setPrev(null);
+  };
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <canvas
+      ref={canvasRef}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      style={{ border: "1px solid black", cursor: "crosshair" }}
+    ></canvas>
+  );
 }
 
-export default App
+export default App;
