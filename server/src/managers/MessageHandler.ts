@@ -1,32 +1,37 @@
-import WebSocket from "ws";
 import { ConnectionManager } from "./ConnectionManager";
-import { Message } from "../types";
+import { Message, RoomId, WSWithRoom } from "../types";
 
 export class MessageHandler {
-    private connectionManager
-    constructor() {
-        this.connectionManager = ConnectionManager.getInstance()
-    }
+  private connectionManager;
+  constructor() {
+    this.connectionManager = ConnectionManager.getInstance();
+  }
 
-    handleConnection(ws: WebSocket) {
-        this.connectionManager.addClient(ws)
-        ws.on("message", (raw) => this.handleMessage(raw.toString(), ws))
-        ws.on("close", () => this.connectionManager.removeClient(ws))
-    }
+  handleConnection(ws: WSWithRoom) {
+    ws.on("message", (raw) => this.handleMessage(raw.toString(), ws));
+    ws.on("close", () => {
+      const roomId = ws.roomId;
+      if (roomId) {
+        this.connectionManager.removeClient(roomId, ws);
+      }
+    });
+  }
 
-    handleMessage(raw: string, ws: WebSocket) {
-        console.log(raw)
-        try {
-            const message = JSON.parse(raw) as Message
-            console.log(message)
-            if (message.type == "draw") {
-                this.connectionManager.broadcast(message, ws)
-            } else {
-                console.warn("Unknown Message Type")
-            }
-        } catch (error) {
-            console.error("Invalid Message Format")
-
-        }
+  handleMessage(message: string, ws: WSWithRoom) {
+    try {
+      const parsedMessage = JSON.parse(message) as Message;
+      const type = parsedMessage.type;
+      switch (parsedMessage.type) {
+        case "join":
+          this.connectionManager.addClient(parsedMessage.roomId, ws);
+          this.connectionManager.broadcast(parsedMessage, ws);
+          break;
+        case "draw":
+          this.connectionManager.broadcast(parsedMessage, ws);
+          break;
+      }
+    } catch (err) {
+      console.error("Invalid Message Format:", err);
     }
+  }
 }
