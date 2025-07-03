@@ -6,12 +6,7 @@ export type Message = JoinMessage | DrawMessage;
 export type DrawMessage = {
   type: "draw";
   roomId: RoomId;
-  payload: {
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-  };
+  payload: any;
 };
 
 export type JoinMessage = {
