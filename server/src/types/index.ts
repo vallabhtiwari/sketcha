@@ -1,3 +1,5 @@
+import { JwtPayload } from "jsonwebtoken";
+import { IncomingMessage } from "http";
 import { WebSocket } from "ws";
 export type RoomId = string;
 
@@ -14,4 +16,8 @@ export type JoinMessage = {
   roomId: RoomId;
 };
 
-export type WSWithRoom = WebSocket & { roomId?: RoomId };
+export type CustomWebSocket = WebSocket & { user: JwtPayload; roomId?: RoomId };
+
+export interface AuthenticatedRequest extends IncomingMessage {
+  user: JwtPayload;
+}

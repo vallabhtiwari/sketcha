@@ -1,5 +1,5 @@
 import { ConnectionManager } from "./ConnectionManager";
-import { Message, RoomId, WSWithRoom } from "../types";
+import { CustomWebSocket, Message, RoomId } from "../types";
 
 export class MessageHandler {
   private connectionManager;
@@ -7,7 +7,7 @@ export class MessageHandler {
     this.connectionManager = ConnectionManager.getInstance();
   }
 
-  handleConnection(ws: WSWithRoom) {
+  handleConnection(ws: CustomWebSocket) {
     ws.on("message", (raw) => this.handleMessage(raw.toString(), ws));
     ws.on("close", () => {
       const roomId = ws.roomId;
@@ -17,7 +17,7 @@ export class MessageHandler {
     });
   }
 
-  handleMessage(message: string, ws: WSWithRoom) {
+  handleMessage(message: string, ws: CustomWebSocket) {
     try {
       const parsedMessage = JSON.parse(message) as Message;
       const type = parsedMessage.type;
