@@ -74,7 +74,9 @@ router.post("/signin", async (req, res) => {
       email: userFound.email,
       name: userFound.name,
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || "SUPER_SECRET");
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "SUPER_SECRET", {
+      expiresIn: "5m",
+    });
     res.json({ token });
   } catch (err) {
     console.error("Signin error:", err);

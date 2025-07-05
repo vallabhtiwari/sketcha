@@ -1,7 +1,6 @@
 import express from "express";
 import { WebSocketServer } from "ws";
 import http from "http";
-import * as cookie from "cookie";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { MessageHandler } from "./managers/MessageHandler";
 import { authRouter } from "./routers/authRouter";
@@ -30,8 +29,8 @@ server.on("upgrade", (req, socket, head) => {
     }
   }
   try {
-    const cookies = cookie.parse(req.headers.cookie || "");
-    const token = cookies.token;
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
     if (!token) {
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
       socket.destroy();
