@@ -11,7 +11,7 @@
     --border: 255 200 200;
     --input: 255 230 230;
 
-    --primary: 255 163 163; /* Peach */
+    --primary: 251 205 206; /* Peach */
     --primary-foreground: 40 20 20;
 
     --secondary: 255 205 205;
@@ -27,7 +27,7 @@
     --destructive-hover: 185 28 28;
     --destructive-foreground: 255 255 255;
 
-    --ring: 255 163 163;
+    --ring: 251 205 206;
     --radius: 0.75rem;
   }
 
@@ -39,7 +39,7 @@
     --border: 80 40 40;
     --input: 60 30 30;
 
-    --primary: 255 163 163;
+    --primary: 251 205 206;
     --primary-foreground: 40 20 20;
 
     --secondary: 120 60 60;
@@ -51,7 +51,7 @@
     --accent: 255 120 120;
     --accent-foreground: 255 255 255;
 
-    --ring: 255 163 163;
+    --ring: 251 205 206;
   }
 
   body {

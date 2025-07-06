@@ -2,8 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { RoomId } from "@/types";
-import { JoinRoom } from "@/app/components/JoinRoom";
-import { CanvasBoard } from "@/app/components/CanvasBoard";
+import { Main } from "@/app/components/Main";
 
 export default function Home() {
   const [roomId, setRoomId] = useState<RoomId>("");
@@ -23,6 +22,5 @@ export default function Home() {
     setRoomId(roomId);
   };
 
-  if (!roomId || !ws) return <JoinRoom onJoin={handleJoin} />;
-  return <CanvasBoard ws={ws} roomId={roomId} />;
+  return <Main />;
 }
