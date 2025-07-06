@@ -2,6 +2,7 @@
 import Link from "next/link";
 
 export function Main() {
+  const loggedIn = false;
   return (
     <main className="flex-1 mt-32 px-4 sm:px-8">
       <section className="max-w-5xl mx-auto py-10 text-center">
@@ -13,7 +14,7 @@ export function Main() {
           wherever you are.
         </p>
         <div className="flex justify-center gap-4">
-          <Link href="/app">
+          <Link href={loggedIn ? "/app" : "/auth"}>
             <button className="bg-primary text-white rounded-xl px-6 py-3 font-medium shadow hover:cursor-pointer">
               Get Started
             </button>
