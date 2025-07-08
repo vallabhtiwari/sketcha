@@ -9,7 +9,7 @@ export const JoinRoom = ({ onJoin }: JoinRoomProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-primary h-screen">
+    <form onSubmit={handleSubmit} className="bg-primary">
       <input
         type="text"
         placeholder="room id"

@@ -2,9 +2,9 @@
 import Link from "next/link";
 
 export function Main() {
-  const loggedIn = false;
+  const loggedIn = true;
   return (
-    <main className="flex-1 mt-32 px-4 sm:px-8">
+    <div className="mt-32 px-4 sm:px-8">
       <section className="max-w-5xl mx-auto py-10 text-center">
         <h1 className="text-5xl sm:text-6xl font-bold mb-6">
           Welcome to <span className="text-primary">Sketcha</span>
@@ -14,8 +14,8 @@ export function Main() {
           wherever you are.
         </p>
         <div className="flex justify-center gap-4">
-          <Link href={loggedIn ? "/app" : "/auth"}>
-            <button className="bg-primary text-white rounded-xl px-6 py-3 font-medium shadow hover:cursor-pointer">
+          <Link href={loggedIn ? "/dashboard" : "/auth"}>
+            <button className="bg-primary text-white rounded-md px-6 py-3 font-medium shadow hover:cursor-pointer">
               Get Started
             </button>
           </Link>
@@ -39,7 +39,7 @@ export function Main() {
           description="WebSocket-based real-time sync ensures no lag collaboration."
         />
       </section>
-    </main>
+    </div>
   );
 }
 
