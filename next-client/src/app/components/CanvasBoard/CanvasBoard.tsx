@@ -20,6 +20,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     canvasBackgroundOptions[0]
   );
 
+  const [selectedTool, setSelectedTool] = useState<
+    "pencil" | "line" | "rect" | "circle" | "arrow" | "text"
+  >("line");
+  const drawingRef = useRef<fabric.Object | null>(null);
+
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
       const resizeCanvas = () => {
@@ -30,8 +35,41 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.setDimensions({ width, height });
         }
       };
-      canvas.isDrawingMode = true;
+      // canvas.isDrawingMode = true;
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      canvas.on("mouse:down", (opt) => {
+        const pointer = canvas.getScenePoint(opt.e);
+        const { x, y } = pointer;
+        if (selectedTool === "line") {
+          const line = new fabric.Line([x, y, x, y], {
+            stroke: brushColor,
+            width: brushWidth,
+            selectable: false,
+          });
+          canvas.add(line);
+          canvas.setActiveObject(line);
+          drawingRef.current = line;
+        }
+      });
+      canvas.on("mouse:move", (opt) => {
+        if (!drawingRef.current) return;
+        const pointer = canvas.getScenePoint(opt.e);
+        if (drawingRef.current.type === "line") {
+          drawingRef.current.set({ x2: pointer.x, y2: pointer.y });
+          canvas.renderAll();
+        }
+      });
+      canvas.on("mouse:up", () => {
+        if (drawingRef.current?.type === "line") {
+          const message = {
+            type: "draw",
+            roomId,
+            payload: drawingRef.current.toObject(),
+          };
+          ws.send(JSON.stringify(message));
+        }
+        drawingRef.current = null;
+      });
       canvas.on("path:created", (e) => {
         const path = e.path as fabric.Path;
         if (!path) return;
