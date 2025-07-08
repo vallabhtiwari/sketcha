@@ -5,9 +5,20 @@ import type { CanvasBoardProps, DrawMessage } from "@/types";
 
 export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const ref = useRef<fabric.Canvas>(null);
+  const canvasBackgroundOptions = [
+    "#f8f8f8",
+    "#444444",
+    "#586071",
+    "#6a5c5c",
+    "#6a3c3c",
+  ];
+
   const [showMenu, setShowMenu] = useState(false);
   const [brushColor, setBrushColor] = useState("#000000");
   const [brushWidth, setBrushWidth] = useState(3);
+  const [canvasBackground, setCanvasBackground] = useState(
+    canvasBackgroundOptions[0]
+  );
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -65,7 +76,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   }, [brushColor, brushWidth]);
 
   return (
-    <div className="relative flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
+    <div
+      className="relative flex-1 flex flex-col dark:bg-gray-900 overflow-hidden"
+      style={{ background: canvasBackground }}
+    >
       <div className="absolute m-2 z-1 flex justify-start">
         <button
           onClick={() => setShowMenu(!showMenu)}
@@ -103,6 +117,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
                 className="w-full accent-primary m-0 p-0"
               />
               <span>{brushWidth}</span>
+            </div>
+            <div>
+              <span>Canvas background</span>
+              <div className="flex justify-between">
+                {canvasBackgroundOptions.map((item) => (
+                  <div
+                    key={item}
+                    className="w-8 h-6 rounded-sm cursor-pointer border border-muted"
+                    style={{ backgroundColor: item }}
+                    title={item}
+                    onClick={() => setCanvasBackground(item)}
+                  ></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
