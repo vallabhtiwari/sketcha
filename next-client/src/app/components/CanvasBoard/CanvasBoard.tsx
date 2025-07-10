@@ -12,18 +12,29 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     "#6a5c5c",
     "#6a3c3c",
   ];
+  const canvasShapeOptions = [
+    "pencil",
+    "line",
+    "rect",
+    "circle",
+    // "arrow",
+    "text",
+  ] as const;
 
   const [showMenu, setShowMenu] = useState(false);
   const [brushColor, setBrushColor] = useState("#000000");
+  const brushColorRef = useRef(brushColor);
   const [brushWidth, setBrushWidth] = useState(3);
   const [canvasBackground, setCanvasBackground] = useState(
     canvasBackgroundOptions[0]
   );
 
-  const [selectedTool, setSelectedTool] = useState<
-    "pencil" | "line" | "rect" | "circle" | "arrow" | "text"
-  >("line");
+  type CanvasShape = (typeof canvasShapeOptions)[number];
+
+  const [selectedTool, setSelectedTool] = useState<CanvasShape>("pencil");
+  const selectedToolRef = useRef<CanvasShape>("pencil");
   const drawingRef = useRef<fabric.Object | null>(null);
+  const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -40,9 +51,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.on("mouse:down", (opt) => {
         const pointer = canvas.getScenePoint(opt.e);
         const { x, y } = pointer;
-        if (selectedTool === "line") {
+        startPointRef.current = { x, y };
+        if (selectedToolRef.current === "line") {
+          console.log("Start Line");
           const line = new fabric.Line([x, y, x, y], {
-            stroke: brushColor,
+            stroke: brushColorRef.current,
             width: brushWidth,
             selectable: false,
           });
@@ -50,17 +63,77 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.setActiveObject(line);
           drawingRef.current = line;
         }
-      });
-      canvas.on("mouse:move", (opt) => {
-        if (!drawingRef.current) return;
-        const pointer = canvas.getScenePoint(opt.e);
-        if (drawingRef.current.type === "line") {
-          drawingRef.current.set({ x2: pointer.x, y2: pointer.y });
-          canvas.renderAll();
+        if (selectedToolRef.current === "rect") {
+          console.log("Start Rect");
+          const rect = new fabric.Rect({
+            left: x,
+            top: y,
+            width: 0,
+            height: 0,
+            fill: "transparent",
+            stroke: brushColorRef.current,
+            strokeWidth: brushWidth,
+            selectable: false,
+          });
+          canvas.add(rect);
+          canvas.setActiveObject(rect);
+          drawingRef.current = rect;
+        }
+        if (selectedToolRef.current === "circle") {
+          const circ = new fabric.Circle({
+            left: x,
+            top: y,
+            radius: 0,
+            fill: "transparent",
+            stroke: brushColorRef.current,
+            strokeWidth: brushWidth,
+            selectable: false,
+            originX: "center",
+            originY: "center",
+          });
+          canvas.add(circ);
+          canvas.setActiveObject(circ);
+          drawingRef.current = circ;
         }
       });
+      canvas.on("mouse:move", (opt) => {
+        if (!drawingRef.current || !startPointRef.current) return;
+        const pointer = canvas.getScenePoint(opt.e);
+        const { x, y } = pointer;
+        const startX = startPointRef.current.x;
+        const startY = startPointRef.current.y;
+        if (drawingRef.current.type === "line") {
+          console.log("Draw Line");
+          drawingRef.current.set({ x2: x, y2: y });
+        }
+        if (drawingRef.current.type === "rect") {
+          const width = x - startX;
+          const height = y - startY;
+
+          drawingRef.current.set({
+            width: Math.abs(width),
+            height: Math.abs(height),
+            left: width < 0 ? x : startX,
+            top: height < 0 ? y : startY,
+          });
+        }
+
+        if (drawingRef.current.type === "circle") {
+          const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2) / 2;
+          const centerX = (x + startX) / 2;
+          const centerY = (y + startY) / 2;
+
+          drawingRef.current.set({
+            left: centerX,
+            top: centerY,
+            radius,
+          });
+        }
+        canvas.renderAll();
+      });
       canvas.on("mouse:up", () => {
-        if (drawingRef.current?.type === "line") {
+        console.log("End ", selectedTool);
+        if (drawingRef.current?.type) {
           const message = {
             type: "draw",
             roomId,
@@ -69,6 +142,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           ws.send(JSON.stringify(message));
         }
         drawingRef.current = null;
+        startPointRef.current = null;
       });
       canvas.on("path:created", (e) => {
         const path = e.path as fabric.Path;
@@ -107,11 +181,21 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
   useEffect(() => {
     const canvas = ref.current;
-    if (canvas && canvas.freeDrawingBrush) {
+    if (!canvas) return;
+    if (selectedTool === "pencil") {
+      canvas.isDrawingMode = true;
+    } else {
+      canvas.isDrawingMode = false;
+    }
+    if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = brushColor;
       canvas.freeDrawingBrush.width = brushWidth;
     }
-  }, [brushColor, brushWidth]);
+    brushColorRef.current = brushColor;
+  }, [brushColor, brushWidth, selectedTool]);
+  useEffect(() => {
+    selectedToolRef.current = selectedTool;
+  }, [selectedTool]);
 
   return (
     <div
@@ -121,7 +205,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       <div className="absolute m-2 z-1 flex justify-start">
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="text-xl px-3 py-2 font-bold hover:cursor-pointer bg-muted rounded-md border border-primary"
+          className="text-xl px-3 py-2 font-bold cursor-pointer bg-muted rounded-md border border-primary"
         >
           ☰
         </button>
@@ -129,6 +213,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       {showMenu && (
         <div className="absolute top-15 left-2 bg-white dark:bg-gray-800 p-4 shadow-md z-50 rounded-md border border-primary">
           <div className="space-y-2">
+            <div>
+              <span>Tool</span>
+              <div className="flex justify-between">
+                {canvasShapeOptions.map((shape) => (
+                  <div
+                    key={shape}
+                    className="w-8 h-6 rounded-sm bg-secondary text-center cursor-pointer"
+                    onClick={() => setSelectedTool(shape)}
+                  >
+                    {shape[0]}
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Color
@@ -178,6 +276,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         className="flex-1"
         onPointerDown={() => setShowMenu && setShowMenu(false)}
       >
+        <span className="absolute top-90 left-10">{selectedTool}</span>
         <Canvas ref={ref} onLoad={onLoad} />
       </div>
     </div>
