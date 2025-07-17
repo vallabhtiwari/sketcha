@@ -17,8 +17,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     "line",
     "rect",
     "circle",
-    // "arrow",
     "text",
+    "eraser",
   ] as const;
 
   const [showMenu, setShowMenu] = useState(false);
@@ -50,14 +50,23 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       canvas.on("mouse:down", (opt) => {
         const pointer = canvas.getScenePoint(opt.e);
+        const clickedTarget = opt.target;
+        console.log(clickedTarget);
         const { x, y } = pointer;
         startPointRef.current = { x, y };
+        if (selectedToolRef.current === "eraser") {
+          if (clickedTarget) {
+            canvas.remove(clickedTarget);
+            canvas.requestRenderAll();
+          }
+        }
+
         if (selectedToolRef.current === "line") {
           console.log("Start Line");
           const line = new fabric.Line([x, y, x, y], {
             stroke: brushColorRef.current,
             width: brushWidth,
-            selectable: false,
+            selectable: true,
           });
           canvas.add(line);
           canvas.setActiveObject(line);
@@ -73,7 +82,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             fill: "transparent",
             stroke: brushColorRef.current,
             strokeWidth: brushWidth,
-            selectable: false,
+            selectable: true,
           });
           canvas.add(rect);
           canvas.setActiveObject(rect);
@@ -87,13 +96,55 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             fill: "transparent",
             stroke: brushColorRef.current,
             strokeWidth: brushWidth,
-            selectable: false,
             originX: "center",
             originY: "center",
+            selectable: true,
+            evented: true,
           });
           canvas.add(circ);
           canvas.setActiveObject(circ);
           drawingRef.current = circ;
+        }
+        if (selectedToolRef.current === "text") {
+          if (clickedTarget && clickedTarget.type === "textbox") {
+            canvas.setActiveObject(clickedTarget);
+            (clickedTarget as fabric.Textbox).enterEditing();
+            canvas.renderAll();
+
+            return;
+          }
+          const textbox = new fabric.Textbox("Type here", {
+            left: x,
+            top: y,
+            width: 200,
+            fontSize: 20,
+            fill: brushColorRef.current,
+            selectable: true,
+            editable: true,
+            padding: 6,
+            borderColor: "#4F46E5",
+            cornerColor: "#4F46E5",
+            cornerSize: 8,
+            transparentCorners: false,
+          });
+
+          const isPlaceholderRef = { current: true };
+
+          canvas.add(textbox);
+          canvas.setActiveObject(textbox);
+          textbox.enterEditing();
+          textbox.selectAll();
+          canvas.renderAll();
+
+          textbox.on("changed", () => {
+            if (isPlaceholderRef.current) {
+              textbox.text = ""; // Clear the placeholder
+              isPlaceholderRef.current = false;
+              canvas.renderAll();
+            }
+          });
+
+          drawingRef.current = textbox;
         }
       });
       canvas.on("mouse:move", (opt) => {
