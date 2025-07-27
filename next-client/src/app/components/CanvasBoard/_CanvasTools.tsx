@@ -1,10 +1,20 @@
+import * as fabric from "fabric";
+import { useSketchStore, canvasBackgroundOptions } from "@/store/sketchStore";
+import { CanvasToolOptions } from "@/types";
 import {
-  useSketchStore,
-  canvasShapeOptions,
-  canvasBackgroundOptions,
-} from "@/store/sketchStore";
+  Menu,
+  Pencil,
+  Eraser,
+  Circle,
+  TextCursor,
+  Square,
+  MousePointer,
+  Minus,
+} from "lucide-react";
+import { useState } from "react";
 
-export const CanvasTools = () => {
+export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
+  const [selected, setSelected] = useState("pencil");
   const showMenu = useSketchStore((state) => state.showMenu);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
   const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
@@ -16,6 +26,20 @@ export const CanvasTools = () => {
     (state) => state.setCanvasBackground
   );
 
+  const handleToolChange = (tool: CanvasToolOptions) => {
+    if (tool === "select" || tool === "eraser") {
+      if (canvas) {
+        canvas.defaultCursor = "default";
+      }
+    } else {
+      if (canvas) {
+        canvas.defaultCursor = "crosshair";
+      }
+    }
+    setSelected(tool);
+    setSelectedTool(tool);
+  };
+
   return (
     <>
       <div className="absolute m-2 z-1 flex justify-start">
@@ -23,7 +47,7 @@ export const CanvasTools = () => {
           onClick={() => setShowMenu(!showMenu)}
           className="text-xl px-3 py-2 font-bold cursor-pointer bg-muted rounded-md border border-primary"
         >
-          ☰
+          <Menu />
         </button>
       </div>
       {showMenu && (
@@ -31,14 +55,38 @@ export const CanvasTools = () => {
           <div className="space-y-2">
             <div>
               <span>Tool</span>
-              <div className="flex justify-between">
-                {canvasShapeOptions.map((shape) => (
+              <div className="grid grid-cols-3 gap-2">
+                {CanvasToolOptions.map((tool) => (
                   <div
-                    key={shape}
-                    className="w-8 h-6 rounded-sm bg-secondary text-center cursor-pointer"
-                    onClick={() => setSelectedTool(shape)}
+                    key={tool}
+                    className={`group w-10 h-8 p-2 border border-primary rounded-sm text-center cursor-pointer flex items-center justify-center ${
+                      selected === tool ? "bg-primary text-white" : ""
+                    }`}
+                    onClick={() => handleToolChange(tool)}
                   >
-                    {shape[0]}
+                    {tool === "pencil" ? (
+                      <Pencil />
+                    ) : tool === "eraser" ? (
+                      <Eraser />
+                    ) : tool === "circle" ? (
+                      <Circle />
+                    ) : tool === "text" ? (
+                      <TextCursor />
+                    ) : tool === "rect" ? (
+                      <Square />
+                    ) : tool === "select" ? (
+                      <MousePointer />
+                    ) : tool === "line" ? (
+                      <Minus />
+                    ) : null}
+                    <div
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1
+                   whitespace-nowrap bg-gray-800 text-white text-xs
+                   rounded px-2 py-1 opacity-0 group-hover:opacity-100
+                   transition pointer-events-none z-10"
+                    >
+                      {tool.charAt(0).toUpperCase() + tool.slice(1)}
+                    </div>
                   </div>
                 ))}
               </div>

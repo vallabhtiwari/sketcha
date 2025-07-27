@@ -235,10 +235,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       className="relative flex-1 flex flex-col dark:bg-gray-900 overflow-hidden"
       style={{ background: canvasBackground }}
     >
-      <CanvasTools />
-
+      <CanvasTools canvas={ref.current} />
       <div className="flex-1" onPointerDown={() => setShowMenu(false)}>
-        <span className="absolute top-90 left-10">{selectedTool}</span>
         <Canvas ref={ref} onLoad={onLoad} />
       </div>
     </div>
