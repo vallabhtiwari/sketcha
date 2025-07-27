@@ -1,16 +1,5 @@
 import { create } from "zustand";
-
-export const canvasShapeOptions = [
-  "none",
-  "pencil",
-  "line",
-  "rect",
-  "circle",
-  "text",
-  "eraser",
-] as const;
-
-export type CanvasShape = (typeof canvasShapeOptions)[number];
+import { CanvasToolOptions } from "@/types";
 
 export const canvasBackgroundOptions = [
   "#f8f8f8",
@@ -25,11 +14,11 @@ interface SketchState {
   brushColor: string;
   brushWidth: number;
   canvasBackground: string;
-  selectedTool: CanvasShape;
+  selectedTool: CanvasToolOptions;
   setBrushColor: (color: string) => void;
   setBrushWidth: (width: number) => void;
   setCanvasBackground: (color: string) => void;
-  setSelectedTool: (tool: CanvasShape) => void;
+  setSelectedTool: (tool: CanvasToolOptions) => void;
   setShowMenu: (show: boolean) => void;
 }
 

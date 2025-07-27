@@ -28,8 +28,8 @@ export type CanvasBoardProps = {
   roomId: RoomId;
 };
 
-const canvasTools = [
-  "none",
+export const CanvasToolOptions = [
+  "select",
   "pencil",
   "line",
   "rect",
@@ -38,4 +38,4 @@ const canvasTools = [
   "eraser",
 ] as const;
 
-export type CanvasTools = (typeof canvasTools)[number];
+export type CanvasToolOptions = (typeof CanvasToolOptions)[number];
