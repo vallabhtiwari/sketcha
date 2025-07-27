@@ -1,38 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as fabric from "fabric";
 import { Canvas } from "./_Canvas";
 import type { CanvasBoardProps, DrawMessage } from "@/types";
+import { useSketchStore } from "@/store/sketchStore";
+import { CanvasTools } from "./_CanvasTools";
 
 export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const ref = useRef<fabric.Canvas>(null);
-  const canvasBackgroundOptions = [
-    "#f8f8f8",
-    "#444444",
-    "#586071",
-    "#6a5c5c",
-    "#6a3c3c",
-  ];
-  const canvasShapeOptions = [
-    "pencil",
-    "line",
-    "rect",
-    "circle",
-    "text",
-    "eraser",
-  ] as const;
+  const brushColor = useSketchStore((state) => state.brushColor);
+  const brushWidth = useSketchStore((state) => state.brushWidth);
+  const canvasBackground = useSketchStore((state) => state.canvasBackground);
+  const selectedTool = useSketchStore((state) => state.selectedTool);
+  const setShowMenu = useSketchStore((state) => state.setShowMenu);
 
-  const [showMenu, setShowMenu] = useState(false);
-  const [brushColor, setBrushColor] = useState("#000000");
   const brushColorRef = useRef(brushColor);
-  const [brushWidth, setBrushWidth] = useState(3);
-  const [canvasBackground, setCanvasBackground] = useState(
-    canvasBackgroundOptions[0]
-  );
-
-  type CanvasShape = (typeof canvasShapeOptions)[number];
-
-  const [selectedTool, setSelectedTool] = useState<CanvasShape>("pencil");
-  const selectedToolRef = useRef<CanvasShape>("pencil");
+  const brushWidthRef = useRef(brushWidth);
+  const selectedToolRef = useRef(selectedTool);
   const drawingRef = useRef<fabric.Object | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -46,12 +29,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.setDimensions({ width, height });
         }
       };
-      // canvas.isDrawingMode = true;
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
       canvas.on("mouse:down", (opt) => {
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
-        console.log(clickedTarget);
         const { x, y } = pointer;
         startPointRef.current = { x, y };
         if (selectedToolRef.current === "eraser") {
@@ -62,10 +43,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
 
         if (selectedToolRef.current === "line") {
-          console.log("Start Line");
           const line = new fabric.Line([x, y, x, y], {
             stroke: brushColorRef.current,
-            width: brushWidth,
+            strokeWidth: brushWidthRef.current,
             selectable: true,
           });
           canvas.add(line);
@@ -73,7 +53,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           drawingRef.current = line;
         }
         if (selectedToolRef.current === "rect") {
-          console.log("Start Rect");
           const rect = new fabric.Rect({
             left: x,
             top: y,
@@ -81,7 +60,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             height: 0,
             fill: "transparent",
             stroke: brushColorRef.current,
-            strokeWidth: brushWidth,
+            strokeWidth: brushWidthRef.current,
             selectable: true,
           });
           canvas.add(rect);
@@ -95,7 +74,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             radius: 0,
             fill: "transparent",
             stroke: brushColorRef.current,
-            strokeWidth: brushWidth,
+            strokeWidth: brushWidthRef.current,
             originX: "center",
             originY: "center",
             selectable: true,
@@ -118,7 +97,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             top: y,
             width: 200,
             fontSize: 20,
-            fill: brushColorRef.current,
             selectable: true,
             editable: true,
             padding: 6,
@@ -126,6 +104,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             cornerColor: "#4F46E5",
             cornerSize: 8,
             transparentCorners: false,
+            stroke: brushColorRef.current,
           });
 
           const isPlaceholderRef = { current: true };
@@ -148,71 +127,73 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       });
       canvas.on("mouse:move", (opt) => {
-        if (!drawingRef.current || !startPointRef.current) return;
         const pointer = canvas.getScenePoint(opt.e);
         const { x, y } = pointer;
-        const startX = startPointRef.current.x;
-        const startY = startPointRef.current.y;
-        if (drawingRef.current.type === "line") {
-          console.log("Draw Line");
-          drawingRef.current.set({ x2: x, y2: y });
-        }
-        if (drawingRef.current.type === "rect") {
-          const width = x - startX;
-          const height = y - startY;
+        if (!startPointRef.current || !drawingRef.current) return;
 
-          drawingRef.current.set({
-            width: Math.abs(width),
-            height: Math.abs(height),
-            left: width < 0 ? x : startX,
-            top: height < 0 ? y : startY,
-          });
+        if (selectedToolRef.current === "line") {
+          const line = drawingRef.current as fabric.Line;
+          if (line) {
+            line.set({ x2: x, y2: y });
+            canvas.requestRenderAll();
+          }
         }
-
-        if (drawingRef.current.type === "circle") {
-          const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2) / 2;
-          const centerX = (x + startX) / 2;
-          const centerY = (y + startY) / 2;
-
-          drawingRef.current.set({
-            left: centerX,
-            top: centerY,
-            radius,
-          });
+        if (selectedToolRef.current === "rect") {
+          const rect = drawingRef.current as fabric.Rect;
+          if (rect) {
+            const width = x - startPointRef.current.x;
+            const height = y - startPointRef.current.y;
+            rect.set({
+              width: Math.abs(width),
+              height: Math.abs(height),
+              left: Math.min(x, startPointRef.current.x),
+              top: Math.min(y, startPointRef.current.y),
+            });
+            canvas.requestRenderAll();
+          }
         }
-        canvas.renderAll();
+        if (selectedToolRef.current === "circle") {
+          const circ = drawingRef.current as fabric.Circle;
+          if (circ) {
+            const radius =
+              Math.sqrt(
+                (x - startPointRef.current.x) ** 2 +
+                  (y - startPointRef.current.y) ** 2
+              ) / 2;
+            const center = {
+              x: (x + startPointRef.current.x) / 2,
+              y: (y + startPointRef.current.y) / 2,
+            };
+            circ.set({ radius, left: center.x, top: center.y });
+            canvas.requestRenderAll();
+          }
+        }
       });
       canvas.on("mouse:up", () => {
-        console.log("End ", selectedTool);
-        if (drawingRef.current?.type) {
-          const message = {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const json = canvas.toDatalessJSON();
+          const message: DrawMessage = {
             type: "draw",
-            roomId,
-            payload: drawingRef.current.toObject(),
+            room: roomId,
+            data: JSON.stringify(json),
           };
           ws.send(JSON.stringify(message));
         }
-        drawingRef.current = null;
         startPointRef.current = null;
-      });
-      canvas.on("path:created", (e) => {
-        const path = e.path as fabric.Path;
-        if (!path) return;
-
-        const message = {
-          type: "draw",
-          roomId,
-          payload: path.toObject(),
-        };
-
-        ws.send(JSON.stringify(message));
+        drawingRef.current = null;
       });
 
-      ws.onmessage = async (event) => {
+      ws.onmessage = (event) => {
         try {
-          const message = JSON.parse(event.data) as DrawMessage;
+          const message: DrawMessage = JSON.parse(event.data);
           if (message.type === "draw") {
-            const [obj] = await fabric.util.enlivenObjects([message.payload]);
+            const remoteCanvas = JSON.parse(message.data);
+            canvas.loadFromJSON(remoteCanvas, () => {
+              canvas.renderAll();
+            });
+          }
+          if (message.type === "draw") {
+            const obj = JSON.parse(message.data);
             if (obj && "type" in obj && typeof obj.type === "string") {
               canvas.add(obj as fabric.Object);
             } else {
@@ -243,6 +224,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.freeDrawingBrush.width = brushWidth;
     }
     brushColorRef.current = brushColor;
+    brushWidthRef.current = brushWidth;
   }, [brushColor, brushWidth, selectedTool]);
   useEffect(() => {
     selectedToolRef.current = selectedTool;
@@ -253,80 +235,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       className="relative flex-1 flex flex-col dark:bg-gray-900 overflow-hidden"
       style={{ background: canvasBackground }}
     >
-      <div className="absolute m-2 z-1 flex justify-start">
-        <button
-          onClick={() => setShowMenu(!showMenu)}
-          className="text-xl px-3 py-2 font-bold cursor-pointer bg-muted rounded-md border border-primary"
-        >
-          ☰
-        </button>
-      </div>
-      {showMenu && (
-        <div className="absolute top-15 left-2 bg-white dark:bg-gray-800 p-4 shadow-md z-50 rounded-md border border-primary">
-          <div className="space-y-2">
-            <div>
-              <span>Tool</span>
-              <div className="flex justify-between">
-                {canvasShapeOptions.map((shape) => (
-                  <div
-                    key={shape}
-                    className="w-8 h-6 rounded-sm bg-secondary text-center cursor-pointer"
-                    onClick={() => setSelectedTool(shape)}
-                  >
-                    {shape[0]}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Color
-              </label>
-              <input
-                type="color"
-                value={brushColor}
-                onChange={(e) => setBrushColor(e.target.value)}
-                className="ml-1 w-8 h-6 p-0 border-none outline-none"
-                // style={{ background: "white" }}
-              />
-            </div>
+      <CanvasTools />
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Width
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={20}
-                value={brushWidth}
-                onChange={(e) => setBrushWidth(parseInt(e.target.value))}
-                className="w-full accent-primary m-0 p-0"
-              />
-              <span>{brushWidth}</span>
-            </div>
-            <div>
-              <span>Canvas background</span>
-              <div className="flex justify-between">
-                {canvasBackgroundOptions.map((item) => (
-                  <div
-                    key={item}
-                    className="w-8 h-6 rounded-sm cursor-pointer border border-muted"
-                    style={{ backgroundColor: item }}
-                    title={item}
-                    onClick={() => setCanvasBackground(item)}
-                  ></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
-        className="flex-1"
-        onPointerDown={() => setShowMenu && setShowMenu(false)}
-      >
+      <div className="flex-1" onPointerDown={() => setShowMenu(false)}>
         <span className="absolute top-90 left-10">{selectedTool}</span>
         <Canvas ref={ref} onLoad={onLoad} />
       </div>
