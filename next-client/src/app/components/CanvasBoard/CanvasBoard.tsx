@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import * as fabric from "fabric";
 import { Canvas } from "./_Canvas";
-import type { CanvasBoardProps, DrawMessage } from "@/types";
+import type { CanvasBoardProps, DrawMessage, Action } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
 
@@ -18,9 +18,13 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const selectedToolRef = useRef(selectedTool);
   const drawingRef = useRef<fabric.Object | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
+  const undoStackRef = useRef<Action[]>([]);
+  const redoStackRef = useRef<Action[]>([]);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
+      ref.current = canvas;
+
       const resizeCanvas = () => {
         const el = canvas.lowerCanvasEl;
         if (el && el.parentElement?.parentElement) {
@@ -41,7 +45,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             canvas.requestRenderAll();
           }
         }
-
         if (selectedToolRef.current === "line") {
           const line = new fabric.Line([x, y, x, y], {
             stroke: brushColorRef.current,
@@ -50,6 +53,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           });
           canvas.add(line);
           canvas.setActiveObject(line);
+          undoStackRef.current.push({ type: "add", object: line });
           drawingRef.current = line;
         }
         if (selectedToolRef.current === "rect") {
@@ -65,6 +69,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           });
           canvas.add(rect);
           canvas.setActiveObject(rect);
+          undoStackRef.current.push({ type: "add", object: rect });
           drawingRef.current = rect;
         }
         if (selectedToolRef.current === "circle") {
@@ -113,6 +118,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
           canvas.add(textbox);
           canvas.setActiveObject(textbox);
+          undoStackRef.current.push({ type: "add", object: textbox });
           textbox.enterEditing();
           textbox.selectAll();
           canvas.renderAll();
@@ -166,14 +172,21 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             ellipse.set({
               rx,
               ry,
-left: center.x,
-top: center.y,
-});
+              left: center.x,
+              top: center.y,
+            });
             canvas.requestRenderAll();
           }
         }
       });
       canvas.on("mouse:up", () => {
+        if (selectedToolRef.current === "pencil") {
+          const objects = canvas.getObjects();
+          if (objects.length > 0) {
+            const lastObject = objects[objects.length - 1];
+            undoStackRef.current.push({ type: "add", object: lastObject });
+          }
+        }
         if (ws && ws.readyState === WebSocket.OPEN) {
           const json = canvas.toDatalessJSON();
           const message: DrawMessage = {
@@ -190,12 +203,6 @@ top: center.y,
       ws.onmessage = (event) => {
         try {
           const message: DrawMessage = JSON.parse(event.data);
-          if (message.type === "draw") {
-            const remoteCanvas = JSON.parse(message.data);
-            canvas.loadFromJSON(remoteCanvas, () => {
-              canvas.renderAll();
-            });
-          }
           if (message.type === "draw") {
             const obj = JSON.parse(message.data);
             if (obj && "type" in obj && typeof obj.type === "string") {
@@ -215,23 +222,64 @@ top: center.y,
     [ws, roomId]
   );
 
+  const handleUndo = () => {
+    const action = undoStackRef.current.pop();
+    const canvas = ref.current;
+    if (!action || !canvas) return;
+    if (action.type === "add") {
+      canvas.remove(action.object);
+      redoStackRef.current.push(action);
+    } else if (action.type === "remove") {
+      canvas.add(action.object);
+      redoStackRef.current.push(action);
+    }
+  };
+
+  const handleRedo = () => {
+    const action = redoStackRef.current.pop();
+    const canvas = ref.current;
+    if (!action || !canvas) return;
+    if (action.type === "add") {
+      canvas.add(action.object);
+      undoStackRef.current.push(action);
+    } else if (action.type === "remove") {
+      canvas.remove(action.object);
+      undoStackRef.current.push(action);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "z") {
+        handleUndo();
+      } else if (
+        e.ctrlKey &&
+        (e.key === "y" || (e.shiftKey && e.key === "Z"))
+      ) {
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, []);
+
+  useEffect(() => {
+    brushColorRef.current = brushColor;
+    brushWidthRef.current = brushWidth;
+  }, [brushColor, brushWidth]);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
+    selectedToolRef.current = selectedTool;
     if (selectedTool === "pencil") {
       canvas.isDrawingMode = true;
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = brushColor;
+        canvas.freeDrawingBrush.width = brushWidth;
+      }
     } else {
       canvas.isDrawingMode = false;
     }
-    if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.color = brushColor;
-      canvas.freeDrawingBrush.width = brushWidth;
-    }
-    brushColorRef.current = brushColor;
-    brushWidthRef.current = brushWidth;
-  }, [brushColor, brushWidth, selectedTool]);
-  useEffect(() => {
-    selectedToolRef.current = selectedTool;
   }, [selectedTool]);
 
   return (

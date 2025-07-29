@@ -1,3 +1,5 @@
+import type * as fabric from "fabric";
+
 export type RoomId = string;
 
 export type JoinMessage = {
@@ -39,3 +41,7 @@ export const CanvasToolOptions = [
 ] as const;
 
 export type CanvasToolOptions = (typeof CanvasToolOptions)[number];
+
+export type Action =
+  | { type: "add"; object: fabric.Object }
+  | { type: "remove"; object: fabric.Object };
