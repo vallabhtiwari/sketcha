@@ -10,6 +10,7 @@ import {
   Square,
   MousePointer,
   Minus,
+  Trash,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -38,6 +39,12 @@ export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
     }
     setSelected(tool);
     setSelectedTool(tool);
+  };
+
+  const handleResetCanvas = () => {
+    if (canvas) {
+      canvas.clear();
+    }
   };
 
   return (
@@ -130,6 +137,14 @@ export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
                   ></div>
                 ))}
               </div>
+            </div>
+            <div>
+              <button
+                onClick={handleResetCanvas}
+                className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-white"
+              >
+                <Trash className="w-5 h-5" /> <span>Reset Canvas</span>
+              </button>
             </div>
           </div>
         </div>
