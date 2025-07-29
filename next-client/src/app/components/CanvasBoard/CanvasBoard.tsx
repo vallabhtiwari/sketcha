@@ -68,10 +68,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           drawingRef.current = rect;
         }
         if (selectedToolRef.current === "circle") {
-          const circ = new fabric.Circle({
+          const ellipse = new fabric.Ellipse({
             left: x,
             top: y,
-            radius: 0,
+            rx: 0,
+            ry: 0,
             fill: "transparent",
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current,
@@ -80,9 +81,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             selectable: true,
             evented: true,
           });
-          canvas.add(circ);
-          canvas.setActiveObject(circ);
-          drawingRef.current = circ;
+          canvas.add(ellipse);
+          canvas.setActiveObject(ellipse);
+          undoStackRef.current.push({ type: "add", object: ellipse });
+          drawingRef.current = ellipse;
         }
         if (selectedToolRef.current === "text") {
           if (clickedTarget && clickedTarget.type === "textbox") {
@@ -153,18 +155,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           }
         }
         if (selectedToolRef.current === "circle") {
-          const circ = drawingRef.current as fabric.Circle;
-          if (circ) {
-            const radius =
-              Math.sqrt(
-                (x - startPointRef.current.x) ** 2 +
-                  (y - startPointRef.current.y) ** 2
-              ) / 2;
+          const ellipse = drawingRef.current as fabric.Ellipse;
+          if (ellipse) {
+            const rx = Math.abs(x - startPointRef.current.x) / 2;
+            const ry = Math.abs(y - startPointRef.current.y) / 2;
             const center = {
               x: (x + startPointRef.current.x) / 2,
               y: (y + startPointRef.current.y) / 2,
             };
-            circ.set({ radius, left: center.x, top: center.y });
+            ellipse.set({
+              rx,
+              ry,
+left: center.x,
+top: center.y,
+});
             canvas.requestRenderAll();
           }
         }
