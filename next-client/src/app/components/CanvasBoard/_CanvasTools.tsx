@@ -1,4 +1,3 @@
-import * as fabric from "fabric";
 import { useSketchStore, canvasBackgroundOptions } from "@/store/sketchStore";
 import { CanvasToolOptions } from "@/types";
 import {
@@ -14,7 +13,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
+export const CanvasTools = ({
+  onResetCanvas,
+  onToolChange,
+}: {
+  onResetCanvas: () => void;
+  onToolChange: (tool: CanvasToolOptions) => void;
+}) => {
   const [selected, setSelected] = useState("pencil");
   const showMenu = useSketchStore((state) => state.showMenu);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
@@ -26,26 +31,6 @@ export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
   const setCanvasBackground = useSketchStore(
     (state) => state.setCanvasBackground
   );
-
-  const handleToolChange = (tool: CanvasToolOptions) => {
-    if (tool === "select" || tool === "eraser") {
-      if (canvas) {
-        canvas.defaultCursor = "default";
-      }
-    } else {
-      if (canvas) {
-        canvas.defaultCursor = "crosshair";
-      }
-    }
-    setSelected(tool);
-    setSelectedTool(tool);
-  };
-
-  const handleResetCanvas = () => {
-    if (canvas) {
-      canvas.clear();
-    }
-  };
 
   return (
     <>
@@ -69,7 +54,11 @@ export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
                     className={`group w-10 h-8 p-2 border border-primary rounded-sm text-center cursor-pointer flex items-center justify-center ${
                       selected === tool ? "bg-primary text-white" : ""
                     }`}
-                    onClick={() => handleToolChange(tool)}
+                    onClick={() => {
+                      onToolChange(tool);
+                      setSelected(tool);
+                      setSelectedTool(tool);
+                    }}
                   >
                     {tool === "pencil" ? (
                       <Pencil />
@@ -140,7 +129,7 @@ export const CanvasTools = ({ canvas }: { canvas: fabric.Canvas | null }) => {
             </div>
             <div>
               <button
-                onClick={handleResetCanvas}
+                onClick={onResetCanvas}
                 className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-white"
               >
                 <Trash className="w-5 h-5" /> <span>Reset Canvas</span>

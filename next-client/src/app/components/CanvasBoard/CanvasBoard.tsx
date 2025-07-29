@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import * as fabric from "fabric";
 import { Canvas } from "./_Canvas";
-import type { CanvasBoardProps, DrawMessage, Action } from "@/types";
+import type {
+  CanvasBoardProps,
+  DrawMessage,
+  Action,
+  CanvasToolOptions,
+} from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
 
@@ -20,7 +25,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const undoStackRef = useRef<Action[]>([]);
   const redoStackRef = useRef<Action[]>([]);
-const hasMovedRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const didResetRef = useRef(false);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -47,10 +53,10 @@ const hasMovedRef = useRef(false);
         const clickedTarget = opt.target;
         const { x, y } = pointer;
         startPointRef.current = { x, y };
-hasMovedRef.current = false;
+        hasMovedRef.current = false;
         if (selectedToolRef.current === "eraser") {
           if (clickedTarget) {
-// Store the removed object for undo
+            // Store the removed object for undo
             undoStackRef.current.push({
               type: "remove",
               object: clickedTarget,
@@ -67,7 +73,6 @@ hasMovedRef.current = false;
           });
           canvas.add(line);
           canvas.setActiveObject(line);
-          undoStackRef.current.push({ type: "add", object: line });
           drawingRef.current = line;
         }
         if (selectedToolRef.current === "rect") {
@@ -83,7 +88,6 @@ hasMovedRef.current = false;
           });
           canvas.add(rect);
           canvas.setActiveObject(rect);
-          undoStackRef.current.push({ type: "add", object: rect });
           drawingRef.current = rect;
         }
         if (selectedToolRef.current === "circle") {
@@ -102,7 +106,6 @@ hasMovedRef.current = false;
           });
           canvas.add(ellipse);
           canvas.setActiveObject(ellipse);
-          undoStackRef.current.push({ type: "add", object: ellipse });
           drawingRef.current = ellipse;
         }
         if (selectedToolRef.current === "text") {
@@ -132,7 +135,6 @@ hasMovedRef.current = false;
 
           canvas.add(textbox);
           canvas.setActiveObject(textbox);
-          undoStackRef.current.push({ type: "add", object: textbox });
           textbox.enterEditing();
           textbox.selectAll();
           canvas.renderAll();
@@ -199,7 +201,7 @@ hasMovedRef.current = false;
         if (
           hasMovedRef.current ||
           (drawingRef.current && selectedToolRef.current === "text")
-) {
+        ) {
           const objects = canvas.getObjects();
           if (objects.length > 0) {
             const lastObject = objects[objects.length - 1];
@@ -217,7 +219,7 @@ hasMovedRef.current = false;
         }
         startPointRef.current = null;
         drawingRef.current = null;
-hasMovedRef.current = false;
+        hasMovedRef.current = false;
       });
 
       ws.onmessage = (event) => {
@@ -243,7 +245,7 @@ hasMovedRef.current = false;
   );
 
   const handleUndo = () => {
-const canvas = ref.current;
+    const canvas = ref.current;
     if (!canvas) return;
     if (didResetRef.current) {
       while (undoStackRef.current.length > 0) {
@@ -262,7 +264,7 @@ const canvas = ref.current;
       return;
     }
     const action = undoStackRef.current.pop();
-        if (!action) return;
+    if (!action) return;
     if (action.type === "add") {
       canvas.remove(action.object);
       redoStackRef.current.push(action);
@@ -273,11 +275,11 @@ const canvas = ref.current;
   };
 
   const handleRedo = () => {
-const canvas = ref.current;
+    const canvas = ref.current;
     if (!canvas) return;
 
     const action = redoStackRef.current.pop();
-        if (!action) return;
+    if (!action) return;
     if (action.type === "add") {
       canvas.add(action.object);
       undoStackRef.current.push(action);
@@ -287,6 +289,30 @@ const canvas = ref.current;
     }
   };
 
+  const handleResetCanvas = () => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const objects = canvas.getObjects();
+    undoStackRef.current = [];
+    objects.forEach((object) => {
+      undoStackRef.current.push({ type: "remove", object });
+    });
+    redoStackRef.current = [];
+    canvas.clear();
+    didResetRef.current = true;
+  };
+
+  const handleToolChange = (tool: CanvasToolOptions) => {
+    if (tool === "select" || tool === "eraser") {
+      if (canvas) {
+        canvas.defaultCursor = "default";
+      }
+    } else {
+      if (canvas) {
+        canvas.defaultCursor = "crosshair";
+      }
+    }
+  };
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "z") {
@@ -306,6 +332,7 @@ const canvas = ref.current;
     brushColorRef.current = brushColor;
     brushWidthRef.current = brushWidth;
   }, [brushColor, brushWidth]);
+
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -326,7 +353,10 @@ const canvas = ref.current;
       className="relative flex-1 flex flex-col dark:bg-gray-900 overflow-hidden"
       style={{ background: canvasBackground }}
     >
-      <CanvasTools canvas={ref.current} />
+      <CanvasTools
+        onResetCanvas={handleResetCanvas}
+        onToolChange={handleToolChange}
+      />
       <div className="flex-1" onPointerDown={() => setShowMenu(false)}>
         <Canvas ref={ref} onLoad={onLoad} />
       </div>
