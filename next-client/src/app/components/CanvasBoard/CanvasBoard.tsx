@@ -20,6 +20,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const undoStackRef = useRef<Action[]>([]);
   const redoStackRef = useRef<Action[]>([]);
+const hasMovedRef = useRef(false);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -34,13 +35,26 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       };
       canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+
+      // Track pencil drawing for undo
+      canvas.on("path:created", (e) => {
+        if (e.path) {
+          undoStackRef.current.push({ type: "add", object: e.path });
+        }
+      });
       canvas.on("mouse:down", (opt) => {
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
         const { x, y } = pointer;
         startPointRef.current = { x, y };
+hasMovedRef.current = false;
         if (selectedToolRef.current === "eraser") {
           if (clickedTarget) {
+// Store the removed object for undo
+            undoStackRef.current.push({
+              type: "remove",
+              object: clickedTarget,
+            });
             canvas.remove(clickedTarget);
             canvas.requestRenderAll();
           }
@@ -139,6 +153,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         const { x, y } = pointer;
         if (!startPointRef.current || !drawingRef.current) return;
 
+        hasMovedRef.current = true;
+
         if (selectedToolRef.current === "line") {
           const line = drawingRef.current as fabric.Line;
           if (line) {
@@ -180,7 +196,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       });
       canvas.on("mouse:up", () => {
-        if (selectedToolRef.current === "pencil") {
+        if (
+          hasMovedRef.current ||
+          (drawingRef.current && selectedToolRef.current === "text")
+) {
           const objects = canvas.getObjects();
           if (objects.length > 0) {
             const lastObject = objects[objects.length - 1];
@@ -198,6 +217,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
         startPointRef.current = null;
         drawingRef.current = null;
+hasMovedRef.current = false;
       });
 
       ws.onmessage = (event) => {
@@ -223,9 +243,26 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   );
 
   const handleUndo = () => {
+const canvas = ref.current;
+    if (!canvas) return;
+    if (didResetRef.current) {
+      while (undoStackRef.current.length > 0) {
+        const action = undoStackRef.current.shift();
+        if (!action) break;
+        if (action.type === "remove") {
+          canvas.add(action.object);
+          redoStackRef.current.push(action);
+        }
+      }
+      didResetRef.current = false;
+      return;
+    }
+    const activeObject = canvas.getActiveObject();
+    if (activeObject?.type === "textbox") {
+      return;
+    }
     const action = undoStackRef.current.pop();
-    const canvas = ref.current;
-    if (!action || !canvas) return;
+        if (!action) return;
     if (action.type === "add") {
       canvas.remove(action.object);
       redoStackRef.current.push(action);
@@ -236,9 +273,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   };
 
   const handleRedo = () => {
+const canvas = ref.current;
+    if (!canvas) return;
+
     const action = redoStackRef.current.pop();
-    const canvas = ref.current;
-    if (!action || !canvas) return;
+        if (!action) return;
     if (action.type === "add") {
       canvas.add(action.object);
       undoStackRef.current.push(action);
