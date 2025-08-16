@@ -1,8 +1,29 @@
 // app/components/Main.tsx
+"use client";
 import Link from "next/link";
+import { useUserStore } from "@/store/userStore";
+import { useEffect } from "react";
+import apiClient from "@/lib/apiClient";
 
 export function Main() {
-  const loggedIn = true;
+  const loggedIn = useUserStore((state) => state.token !== null);
+  const checkToken = async () => {
+    try {
+      const token = useUserStore.getState().token;
+      if (!token) {
+        const response = await apiClient.post("/auth/refresh");
+        if (response.status === 200) {
+          useUserStore.getState().setToken(response.data);
+        }
+      }
+    } catch (err) {
+      console.error("Error checking token:", err);
+      useUserStore.getState().clearAuth();
+    }
+  };
+  useEffect(() => {
+    checkToken();
+  }, [loggedIn]);
   return (
     <div className="mt-32 px-4 sm:px-8">
       <section className="max-w-5xl mx-auto py-10 text-center">
