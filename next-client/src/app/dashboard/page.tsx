@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { RoomId } from "@/types";
 import { CanvasBoard } from "@/app/components/CanvasBoard";
+import { useUserStore } from "@/store/userStore";
 
 export default function Dashboard({ user }: { user?: any }) {
   const [roomId, setRoomId] = useState<RoomId>("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [rooms, setRooms] = useState<string[]>([]);
   const [showProfile, setShowProfile] = useState(false);
+  const token = useUserStore((state) => state.token?.accessToken);
 
   useEffect(() => {
     // Later replace with actual backend call
@@ -18,7 +20,6 @@ export default function Dashboard({ user }: { user?: any }) {
   }, []);
 
   const handleJoin = (roomId: RoomId) => {
-    const token = localStorage.getItem("token");
     const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
     socket.onopen = () =>
       socket.send(

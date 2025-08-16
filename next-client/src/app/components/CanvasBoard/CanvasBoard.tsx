@@ -46,6 +46,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.on("path:created", (e) => {
         if (e.path) {
           undoStackRef.current.push({ type: "add", object: e.path });
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log("sending draw message in path created");
+            const message: DrawMessage = {
+              type: "draw",
+              roomId,
+              payload: e.path.toObject(),
+            };
+            ws.send(JSON.stringify(message));
+          }
         }
       });
       canvas.on("mouse:down", (opt) => {
@@ -207,31 +216,46 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           if (objects.length > 0) {
             const lastObject = objects[objects.length - 1];
             undoStackRef.current.push({ type: "add", object: lastObject });
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              lastObject.setCoords();
+              const boundingRect = lastObject.getBoundingRect();
+              const objectData = lastObject.toObject();
+              if (selectedToolRef.current == "circle") {
+                objectData.left = boundingRect.left;
+                objectData.top = boundingRect.top;
+                objectData.originX = "left";
+                objectData.originY = "top";
+              } else {
+                objectData.left = boundingRect.left;
+                objectData.top = boundingRect.top;
+              }
+              console.log(objectData);
+              const message: DrawMessage = {
+                type: "draw",
+                roomId,
+                payload: objectData,
+              };
+              ws.send(JSON.stringify(message));
+            }
           }
-        }
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          const json = canvas.toDatalessJSON();
-          const message: DrawMessage = {
-            type: "draw",
-            room: roomId,
-            data: JSON.stringify(json),
-          };
-          ws.send(JSON.stringify(message));
         }
         startPointRef.current = null;
         drawingRef.current = null;
         hasMovedRef.current = false;
       });
 
-      ws.onmessage = (event) => {
+      ws.onmessage = async (event) => {
         try {
           const message: DrawMessage = JSON.parse(event.data);
           if (message.type === "draw") {
-            const obj = JSON.parse(message.data);
+            const [obj] = await fabric.util.enlivenObjects([message.payload]);
+            console.log("obj", obj);
             if (obj && "type" in obj && typeof obj.type === "string") {
               canvas.add(obj as fabric.Object);
+              canvas.renderAll();
             } else {
-              console.warn("Received non-displayable object", obj);
+              console.log("Received non-displayable object", obj);
             }
           }
         } catch (err) {

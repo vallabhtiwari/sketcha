@@ -9,8 +9,8 @@ export type JoinMessage = {
 
 export type DrawMessage = {
   type: "draw";
-  room: RoomId;
-  data: string;
+  roomId: RoomId;
+  payload: any;
 };
 
 export type DrawBeginMessage = {
