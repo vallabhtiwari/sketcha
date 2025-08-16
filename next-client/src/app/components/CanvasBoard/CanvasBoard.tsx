@@ -199,8 +199,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       });
       canvas.on("mouse:up", () => {
         if (
-          hasMovedRef.current ||
-          (drawingRef.current && selectedToolRef.current === "text")
+          selectedToolRef.current !== "pencil" &&
+          (hasMovedRef.current ||
+            (drawingRef.current && selectedToolRef.current === "text"))
         ) {
           const objects = canvas.getObjects();
           if (objects.length > 0) {
