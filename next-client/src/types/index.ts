@@ -45,3 +45,20 @@ export type CanvasToolOptions = (typeof CanvasToolOptions)[number];
 export type Action =
   | { type: "add"; object: fabric.Object }
   | { type: "remove"; object: fabric.Object };
+
+export type User = {
+  userId: string;
+  name?: string;
+  email: string;
+};
+
+export type SignupResponse = {
+  message: string;
+  data: {
+    userId: string;
+  };
+};
+
+export type SigninResponse = {
+  accessToken: string;
+};
