@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import apiClient from "@/lib/apiClient";
+import { useUserStore } from "@/store/userStore";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -9,6 +11,7 @@ export default function AuthPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const toggleMode = () =>
     setMode((prev) => (prev === "signIn" ? "signUp" : "signIn"));
@@ -23,9 +26,20 @@ export default function AuthPage() {
     setError("");
 
     try {
+      const endpoint = mode === "signIn" ? "/auth/signin" : "/auth/signup";
+      const response = await apiClient.post(endpoint, form);
+      if (mode === "signIn") {
+        useUserStore.getState().setToken(response.data);
+        router.push("/dashboard");
+      } else {
+        setMode("signIn");
+        setMessage("Signup successful, please sign in");
+      }
     } catch (err: any) {
+      console.log("err", err);
       setError(err.message);
     } finally {
+      setForm({ email: "", password: "" });
       setLoading(false);
     }
   };
@@ -65,6 +79,12 @@ export default function AuthPage() {
               className="w-full px-4 py-2 rounded-xl bg-muted text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+
+          {message && (
+            <p className="text-sm text-center text-muted-foreground">
+              {message}
+            </p>
+          )}
 
           {error && (
             <p className="text-sm text-center text-destructive">{error}</p>
