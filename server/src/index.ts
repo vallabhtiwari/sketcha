@@ -1,10 +1,12 @@
 import express from "express";
 import { WebSocketServer } from "ws";
 import http from "http";
+import cors from "cors";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { MessageHandler } from "./managers/MessageHandler";
 import { authRouter } from "./routers/authRouter";
 import { AuthenticatedRequest, CustomWebSocket } from "./types";
+import cookieParser from "cookie-parser";
 
 const PORT = 8080;
 const app = express();
@@ -18,6 +20,12 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .map((origin) => origin.trim());
 
 const isDev = process.env.NODE_ENV === "development";
+const corsOptions = {
+  origin: isDev
+    ? ["http://localhost:3000", "http://127.0.0.1:3000"]
+    : allowedOrigins,
+  credentials: true,
+};
 
 server.on("upgrade", (req, socket, head) => {
   const origin = req.headers.origin;
@@ -54,10 +62,13 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 wss.on("connection", (ws: CustomWebSocket, req: AuthenticatedRequest) => {
+  if (!req.user) return ws.close();
   messageHandler.handleConnection(ws);
 });
 
 app.use(express.json());
+app.use(cookieParser());
+app.use(cors(corsOptions));
 
 app.get("/", (req, res) => {
   res.json("HTTP service running...");
