@@ -6,8 +6,9 @@ import type {
   DrawMessage,
   Action,
   CanvasToolOptions,
-EraseMessage,
+  EraseMessage,
   Message,
+  ResetCanvasMessage,
 } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
@@ -51,11 +52,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       // Track pencil drawing for undo
       canvas.on("path:created", (e) => {
         if (e.path) {
-e.path.set("objectID", crypto.randomUUID());
+          e.path.set("objectID", crypto.randomUUID());
           undoStackRef.current.push({ type: "add", object: e.path });
           if (ws && ws.readyState === WebSocket.OPEN) {
             console.log("sending draw message in path created");
-const pathData = e.path.toObject();
+            const pathData = e.path.toObject();
             pathData.objectID = e.path.get("objectID");
             const message: DrawMessage = {
               type: "draw",
@@ -67,7 +68,7 @@ const pathData = e.path.toObject();
         }
       });
       canvas.on("mouse:down", (opt) => {
-objectIDRef.current = crypto.randomUUID();
+        objectIDRef.current = crypto.randomUUID();
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
         const { x, y } = pointer;
@@ -82,7 +83,7 @@ objectIDRef.current = crypto.randomUUID();
             });
             canvas.remove(clickedTarget);
             canvas.requestRenderAll();
-const message: EraseMessage = {
+            const message: EraseMessage = {
               type: "erase",
               roomId,
               objectID: clickedTarget.get("objectID"),
@@ -95,7 +96,7 @@ const message: EraseMessage = {
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current,
             selectable: true,
-objectID: objectIDRef.current,
+            objectID: objectIDRef.current,
           });
           canvas.add(line);
           canvas.setActiveObject(line);
@@ -111,7 +112,7 @@ objectID: objectIDRef.current,
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current,
             selectable: true,
-objectID: objectIDRef.current,
+            objectID: objectIDRef.current,
           });
           canvas.add(rect);
           canvas.setActiveObject(rect);
@@ -130,7 +131,7 @@ objectID: objectIDRef.current,
             originY: "center",
             selectable: true,
             evented: true,
-objectID: objectIDRef.current,
+            objectID: objectIDRef.current,
           });
           canvas.add(ellipse);
           canvas.setActiveObject(ellipse);
@@ -157,7 +158,7 @@ objectID: objectIDRef.current,
             cornerSize: 8,
             transparentCorners: false,
             stroke: brushColorRef.current,
-objectID: objectIDRef.current,
+            objectID: objectIDRef.current,
           });
 
           const isPlaceholderRef = { current: true };
@@ -241,7 +242,7 @@ objectID: objectIDRef.current,
               lastObject.setCoords();
               const boundingRect = lastObject.getBoundingRect();
               const objectData = lastObject.toObject();
-objectData.objectID =
+              objectData.objectID =
                 lastObject.get("objectID") || objectIDRef.current;
               if (selectedToolRef.current == "circle") {
                 objectData.left = boundingRect.left;
@@ -252,7 +253,6 @@ objectData.objectID =
                 objectData.left = boundingRect.left;
                 objectData.top = boundingRect.top;
               }
-              console.log(objectData);
               const message: DrawMessage = {
                 type: "draw",
                 roomId,
@@ -266,16 +266,118 @@ objectData.objectID =
         drawingRef.current = null;
         hasMovedRef.current = false;
       });
+
+      const handleUndo = () => {
+        if (!canvas) return;
+        if (didResetRef.current) {
+          while (undoStackRef.current.length > 0) {
+            const action = undoStackRef.current.shift();
+            if (!action) break;
+            if (action.type === "remove") {
+              canvas.add(action.object);
+              redoStackRef.current.push(action);
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                const message: DrawMessage = {
+                  type: "draw",
+                  roomId,
+                  payload: action.object.toObject(),
+                };
+                ws.send(JSON.stringify(message));
+              }
+            }
+          }
+          didResetRef.current = false;
+          return;
+        }
+        const activeObject = canvas.getActiveObject();
+        if (activeObject?.type === "textbox") {
+          return;
+        }
+        const action = undoStackRef.current.pop();
+        if (!action) return;
+        if (action.type === "add") {
+          canvas.remove(action.object);
+          redoStackRef.current.push(action);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: EraseMessage = {
+              type: "erase",
+              roomId,
+              objectID: action.object.get("objectID"),
+            };
+            ws.send(JSON.stringify(message));
+          }
+        } else if (action.type === "remove") {
+          canvas.add(action.object);
+          redoStackRef.current.push(action);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: DrawMessage = {
+              type: "draw",
+              roomId,
+              payload: action.object.toObject(),
+            };
+            ws.send(JSON.stringify(message));
+          }
+        }
+      };
+
+      const handleRedo = () => {
+        if (!canvas) return;
+
+        const action = redoStackRef.current.pop();
+        if (!action) return;
+        if (action.type === "add") {
+          canvas.add(action.object);
+          undoStackRef.current.push(action);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: DrawMessage = {
+              type: "draw",
+              roomId,
+              payload: action.object.toObject(),
+            };
+            ws.send(JSON.stringify(message));
+          }
+        } else if (action.type === "remove") {
+          canvas.remove(action.object);
+          undoStackRef.current.push(action);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: EraseMessage = {
+              type: "erase",
+              roomId,
+              objectID: action.object.get("objectID"),
+            };
+            ws.send(JSON.stringify(message));
+          }
+        }
+      };
+
+      const handleResetCanvas = () => {
+        if (!canvas) return;
+        const objects = canvas.getObjects();
+        undoStackRef.current = [];
+        objects.forEach((object) => {
+          undoStackRef.current.push({ type: "remove", object });
+        });
+        redoStackRef.current = [];
+        canvas.clear();
+        didResetRef.current = true;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const message: ResetCanvasMessage = {
+            type: "reset-canvas",
+            roomId,
+          };
+          ws.send(JSON.stringify(message));
+        }
+      };
+
       handleUndoRef.current = handleUndo;
       handleRedoRef.current = handleRedo;
       handleResetCanvasRef.current = handleResetCanvas;
 
       ws.onmessage = async (event) => {
         try {
-          const message: DrawMessage = JSON.parse(event.data);
+          const message: Message = JSON.parse(event.data);
           if (message.type === "draw") {
             const [obj] = await fabric.util.enlivenObjects([message.payload]);
-            console.log("obj", obj);
             if (obj && "type" in obj && typeof obj.type === "string") {
               const fabricObj = obj as fabric.Object;
               if (message.payload.objectID) {
@@ -287,7 +389,7 @@ objectData.objectID =
               console.log("Received non-displayable object", obj);
             }
           }
-if (message.type === "erase") {
+          if (message.type === "erase") {
             if (message.objectID) {
               const obj = canvas.getObjects().find((obj) => {
                 return obj.get("objectID") === message.objectID;
@@ -300,14 +402,20 @@ if (message.type === "erase") {
               }
             }
           }
+          if (message.type === "reset-canvas") {
+            canvas.clear();
+            canvas.renderAll();
+          }
         } catch (err) {
           console.error("Failed to load remote drawing:", err);
         }
       };
+
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
       return () => window.removeEventListener("resize", resizeCanvas);
     },
+
     [ws, roomId]
   );
 
@@ -316,27 +424,14 @@ if (message.type === "erase") {
   const handleRedo = () => handleRedoRef.current?.();
 
   const handleResetCanvas = () => handleResetCanvasRef.current?.();
-    const canvas = ref.current;
-    if (!canvas) return;
-    const objects = canvas.getObjects();
-    undoStackRef.current = [];
-    objects.forEach((object) => {
-      undoStackRef.current.push({ type: "remove", object });
-    });
-    redoStackRef.current = [];
-    canvas.clear();
-    didResetRef.current = true;
-  };
 
   const handleToolChange = (tool: CanvasToolOptions) => {
+    const canvas = ref.current;
+    if (!canvas) return;
     if (tool === "select" || tool === "eraser") {
-      if (canvas) {
-        canvas.defaultCursor = "default";
-      }
+      canvas.defaultCursor = "default";
     } else {
-      if (canvas) {
-        canvas.defaultCursor = "crosshair";
-      }
+      canvas.defaultCursor = "crosshair";
     }
   };
   useEffect(() => {
