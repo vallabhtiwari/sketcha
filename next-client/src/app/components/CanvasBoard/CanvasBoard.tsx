@@ -29,6 +29,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const redoStackRef = useRef<Action[]>([]);
   const hasMovedRef = useRef(false);
   const didResetRef = useRef(false);
+  const objectIDRef = useRef("");
+  const handleUndoRef = useRef<(() => void) | null>(null);
+  const handleRedoRef = useRef<(() => void) | null>(null);
+  const handleResetCanvasRef = useRef<(() => void) | null>(null);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -262,6 +266,9 @@ objectData.objectID =
         drawingRef.current = null;
         hasMovedRef.current = false;
       });
+      handleUndoRef.current = handleUndo;
+      handleRedoRef.current = handleRedo;
+      handleResetCanvasRef.current = handleResetCanvas;
 
       ws.onmessage = async (event) => {
         try {
@@ -304,52 +311,11 @@ if (message.type === "erase") {
     [ws, roomId]
   );
 
-  const handleUndo = () => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    if (didResetRef.current) {
-      while (undoStackRef.current.length > 0) {
-        const action = undoStackRef.current.shift();
-        if (!action) break;
-        if (action.type === "remove") {
-          canvas.add(action.object);
-          redoStackRef.current.push(action);
-        }
-      }
-      didResetRef.current = false;
-      return;
-    }
-    const activeObject = canvas.getActiveObject();
-    if (activeObject?.type === "textbox") {
-      return;
-    }
-    const action = undoStackRef.current.pop();
-    if (!action) return;
-    if (action.type === "add") {
-      canvas.remove(action.object);
-      redoStackRef.current.push(action);
-    } else if (action.type === "remove") {
-      canvas.add(action.object);
-      redoStackRef.current.push(action);
-    }
-  };
+  const handleUndo = () => handleUndoRef.current?.();
 
-  const handleRedo = () => {
-    const canvas = ref.current;
-    if (!canvas) return;
+  const handleRedo = () => handleRedoRef.current?.();
 
-    const action = redoStackRef.current.pop();
-    if (!action) return;
-    if (action.type === "add") {
-      canvas.add(action.object);
-      undoStackRef.current.push(action);
-    } else if (action.type === "remove") {
-      canvas.remove(action.object);
-      undoStackRef.current.push(action);
-    }
-  };
-
-  const handleResetCanvas = () => {
+  const handleResetCanvas = () => handleResetCanvasRef.current?.();
     const canvas = ref.current;
     if (!canvas) return;
     const objects = canvas.getObjects();
