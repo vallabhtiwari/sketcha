@@ -6,6 +6,8 @@ import type {
   DrawMessage,
   Action,
   CanvasToolOptions,
+EraseMessage,
+  Message,
 } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
@@ -45,19 +47,23 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       // Track pencil drawing for undo
       canvas.on("path:created", (e) => {
         if (e.path) {
+e.path.set("objectID", crypto.randomUUID());
           undoStackRef.current.push({ type: "add", object: e.path });
           if (ws && ws.readyState === WebSocket.OPEN) {
             console.log("sending draw message in path created");
+const pathData = e.path.toObject();
+            pathData.objectID = e.path.get("objectID");
             const message: DrawMessage = {
               type: "draw",
               roomId,
-              payload: e.path.toObject(),
+              payload: pathData,
             };
             ws.send(JSON.stringify(message));
           }
         }
       });
       canvas.on("mouse:down", (opt) => {
+objectIDRef.current = crypto.randomUUID();
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
         const { x, y } = pointer;
@@ -72,6 +78,12 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             });
             canvas.remove(clickedTarget);
             canvas.requestRenderAll();
+const message: EraseMessage = {
+              type: "erase",
+              roomId,
+              objectID: clickedTarget.get("objectID"),
+            };
+            ws.send(JSON.stringify(message));
           }
         }
         if (selectedToolRef.current === "line") {
@@ -79,6 +91,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current,
             selectable: true,
+objectID: objectIDRef.current,
           });
           canvas.add(line);
           canvas.setActiveObject(line);
@@ -94,6 +107,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current,
             selectable: true,
+objectID: objectIDRef.current,
           });
           canvas.add(rect);
           canvas.setActiveObject(rect);
@@ -112,6 +126,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             originY: "center",
             selectable: true,
             evented: true,
+objectID: objectIDRef.current,
           });
           canvas.add(ellipse);
           canvas.setActiveObject(ellipse);
@@ -138,6 +153,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             cornerSize: 8,
             transparentCorners: false,
             stroke: brushColorRef.current,
+objectID: objectIDRef.current,
           });
 
           const isPlaceholderRef = { current: true };
@@ -221,6 +237,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
               lastObject.setCoords();
               const boundingRect = lastObject.getBoundingRect();
               const objectData = lastObject.toObject();
+objectData.objectID =
+                lastObject.get("objectID") || objectIDRef.current;
               if (selectedToolRef.current == "circle") {
                 objectData.left = boundingRect.left;
                 objectData.top = boundingRect.top;
@@ -252,10 +270,27 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             const [obj] = await fabric.util.enlivenObjects([message.payload]);
             console.log("obj", obj);
             if (obj && "type" in obj && typeof obj.type === "string") {
-              canvas.add(obj as fabric.Object);
+              const fabricObj = obj as fabric.Object;
+              if (message.payload.objectID) {
+                fabricObj.set("objectID", message.payload.objectID);
+              }
+              canvas.add(fabricObj);
               canvas.renderAll();
             } else {
               console.log("Received non-displayable object", obj);
+            }
+          }
+if (message.type === "erase") {
+            if (message.objectID) {
+              const obj = canvas.getObjects().find((obj) => {
+                return obj.get("objectID") === message.objectID;
+              });
+              if (obj) {
+                canvas.remove(obj);
+                canvas.renderAll();
+              } else {
+                console.log("Object to be erased not found", message.objectID);
+              }
             }
           }
         } catch (err) {
