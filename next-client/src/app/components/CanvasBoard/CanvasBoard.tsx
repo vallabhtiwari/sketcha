@@ -9,6 +9,7 @@ import type {
   EraseMessage,
   Message,
   ResetCanvasMessage,
+  TextUpdateMessage,
 } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
@@ -174,6 +175,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
               textbox.text = ""; // Clear the placeholder
               isPlaceholderRef.current = false;
               canvas.renderAll();
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              const message: TextUpdateMessage = {
+                type: "text-update",
+                roomId,
+                objectID: textbox.get("objectID"),
+                text: textbox.text,
+              };
+              ws.send(JSON.stringify(message));
             }
           });
 
@@ -405,6 +415,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           if (message.type === "reset-canvas") {
             canvas.clear();
             canvas.renderAll();
+          }
+          if (message.type === "text-update") {
+            const obj = canvas.getObjects().find((obj) => {
+              return obj.get("objectID") === message.objectID;
+            });
+            if (obj && obj.type === "textbox") {
+              (obj as fabric.Textbox).set("text", message.text);
+              canvas.renderAll();
+            }
           }
         } catch (err) {
           console.error("Failed to load remote drawing:", err);
