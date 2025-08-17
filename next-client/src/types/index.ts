@@ -13,13 +13,23 @@ export type DrawMessage = {
   payload: any;
 };
 
-export type DrawBeginMessage = {
-  type: "draw-begin";
-  room: RoomId;
-  data: string;
+export type EraseMessage = {
+  type: "erase";
+  roomId: RoomId;
+  objectID: string;
 };
 
+export type ResetCanvasMessage = {
+  type: "reset-canvas";
+  roomId: RoomId;
+};
+
+export type Message =
+  | JoinMessage
+  | DrawMessage
 export type Message = JoinMessage | DrawMessage | DrawBeginMessage;
+  | EraseMessage
+  | ResetCanvasMessage;
 
 export type JoinRoomProps = {
   onJoin: (roomId: RoomId) => void;
