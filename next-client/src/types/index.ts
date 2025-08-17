@@ -24,12 +24,40 @@ export type ResetCanvasMessage = {
   roomId: RoomId;
 };
 
+export type TextUpdateMessage = {
+  type: "text-update";
+  roomId: RoomId;
+  objectID: string;
+  text: string;
+};
+
+export type ObjectModifiedMessage = {
+  type: "object-modified";
+  roomId: RoomId;
+  objectID: string;
+  properties: {
+    left?: number;
+    top?: number;
+    width?: number;
+    height?: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    scaleX?: number;
+    scaleY?: number;
+    angle?: number;
+    originX?: string;
+    originY?: string;
+  };
+};
+
 export type Message =
   | JoinMessage
   | DrawMessage
-export type Message = JoinMessage | DrawMessage | DrawBeginMessage;
   | EraseMessage
-  | ResetCanvasMessage;
+  | ResetCanvasMessage
+  | TextUpdateMessage
+  | ObjectModifiedMessage;
 
 export type JoinRoomProps = {
   onJoin: (roomId: RoomId) => void;

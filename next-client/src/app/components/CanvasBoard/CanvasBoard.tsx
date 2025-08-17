@@ -10,6 +10,7 @@ import type {
   Message,
   ResetCanvasMessage,
   TextUpdateMessage,
+  ObjectModifiedMessage,
 } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
@@ -35,6 +36,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const handleUndoRef = useRef<(() => void) | null>(null);
   const handleRedoRef = useRef<(() => void) | null>(null);
   const handleResetCanvasRef = useRef<(() => void) | null>(null);
+  const isReceivingModificationRef = useRef(false);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -277,6 +279,36 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         hasMovedRef.current = false;
       });
 
+      canvas.on("object:modified", (opt) => {
+        if (isReceivingModificationRef.current) return;
+
+        const obj = opt.target;
+        if (!obj || !obj.get("objectID")) return;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const message: ObjectModifiedMessage = {
+            type: "object-modified",
+            roomId,
+            objectID: obj.get("objectID"),
+            properties: {
+              left: obj.get("left"),
+              top: obj.get("top"),
+              width: obj.get("width"),
+              height: obj.get("height"),
+              fill: obj.get("fill"),
+              stroke: obj.get("stroke"),
+              strokeWidth: obj.get("strokeWidth"),
+              scaleX: obj.get("scaleX"),
+              scaleY: obj.get("scaleY"),
+              angle: obj.get("angle"),
+              originX: obj.get("originX"),
+              originY: obj.get("originY"),
+            },
+          };
+          ws.send(JSON.stringify(message));
+        }
+      });
+
       const handleUndo = () => {
         if (!canvas) return;
         if (didResetRef.current) {
@@ -423,6 +455,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             if (obj && obj.type === "textbox") {
               (obj as fabric.Textbox).set("text", message.text);
               canvas.renderAll();
+            }
+          }
+          if (message.type === "object-modified") {
+            const obj = canvas.getObjects().find((obj) => {
+              return obj.get("objectID") === message.objectID;
+            });
+            if (obj) {
+              isReceivingModificationRef.current = true;
+              console.log("object modified", obj.get("type"));
+              obj.set(message.properties);
+              obj.setCoords();
+              obj.set("selectable", true);
+              canvas.renderAll();
+              isReceivingModificationRef.current = false;
             }
           }
         } catch (err) {

@@ -7,7 +7,9 @@ export type Message =
   | JoinMessage
   | DrawMessage
   | EraseMessage
-  | ResetCanvasMessage;
+  | ResetCanvasMessage
+  | TextUpdateMessage
+  | ObjectModifiedMessage;
 
 export type DrawMessage = {
   type: "draw";
@@ -29,6 +31,33 @@ export type EraseMessage = {
 export type ResetCanvasMessage = {
   type: "reset-canvas";
   roomId: RoomId;
+};
+
+export type TextUpdateMessage = {
+  type: "text-update";
+  roomId: RoomId;
+  objectID: string;
+  text: string;
+};
+
+export type ObjectModifiedMessage = {
+  type: "object-modified";
+  roomId: RoomId;
+  objectID: string;
+  properties: {
+    left?: number;
+    top?: number;
+    width?: number;
+    height?: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    scaleX?: number;
+    scaleY?: number;
+    angle?: number;
+    originX?: string;
+    originY?: string;
+  };
 };
 
 export type CustomWebSocket = WebSocket & { user: JwtPayload; roomId?: RoomId };
