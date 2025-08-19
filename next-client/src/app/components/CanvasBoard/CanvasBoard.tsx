@@ -517,6 +517,11 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   useEffect(() => {
     brushColorRef.current = brushColor;
     brushWidthRef.current = brushWidth;
+    const canvas = ref.current;
+    if (canvas && canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = brushColor;
+      canvas.freeDrawingBrush.width = brushWidth;
+    }
   }, [brushColor, brushWidth]);
 
   useEffect(() => {
@@ -525,10 +530,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     selectedToolRef.current = selectedTool;
     if (selectedTool === "pencil") {
       canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = brushColor;
-        canvas.freeDrawingBrush.width = brushWidth;
-      }
     } else {
       canvas.isDrawingMode = false;
     }

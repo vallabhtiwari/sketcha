@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { RoomId } from "@/types";
 import { CanvasBoard } from "@/app/components/CanvasBoard";
 import { useUserStore } from "@/store/userStore";
+import { Palette } from "lucide-react";
 
 export default function Dashboard({ user }: { user?: any }) {
   const [roomId, setRoomId] = useState<RoomId>("");
@@ -36,8 +37,9 @@ export default function Dashboard({ user }: { user?: any }) {
     return (
       <div className="px-4 py-8 flex justify-center">
         <div className="w-full max-w-4xl space-y-10">
-          <h1 className="text-2xl font-bold text-center text-primary">
-            Welcome{user?.name ? `, ${user.name}` : ""} 🎨
+          <h1 className="text-2xl font-bold text-center text-primary flex items-center justify-center gap-2">
+            Welcome{user?.name ? `, ${user.name}` : ""}
+            <Palette className="w-6 h-6 inline-block text-primary" />
           </h1>
 
           <form

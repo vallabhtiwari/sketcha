@@ -43,17 +43,17 @@ export const CanvasTools = ({
         </button>
       </div>
       {showMenu && (
-        <div className="absolute top-15 left-2 p-4 shadow-md z-50 rounded-md border border-primary bg-[rgb(255,251,248)] dark:bg-[rgb(26,20,16)]">
+        <div className="absolute w-60 top-15 left-2 p-4 shadow-md z-50 rounded-md border border-primary bg-[rgb(255,251,248)] dark:bg-[rgb(26,20,16)]">
           <div className="space-y-2">
             <div>
               <span className="font-medium text-muted-foreground text-xl">
                 Tool
               </span>
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="grid grid-cols-3 gap-3 mt-2 w-full">
                 {CanvasToolOptions.map((tool) => (
                   <div
                     key={tool}
-                    className={`group w-10 h-8 p-2 border border-primary rounded-sm text-center cursor-pointer flex items-center justify-center ${
+                    className={`group aspect-square border border-primary rounded-sm cursor-pointer flex items-center justify-center ${
                       selected === tool
                         ? "bg-primary text-primary-foreground"
                         : "text-primary"
@@ -91,7 +91,7 @@ export const CanvasTools = ({
                 ))}
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-baseline">
               <label className="font-medium text-muted-foreground text-xl">
                 Color
               </label>
@@ -113,7 +113,7 @@ export const CanvasTools = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-baseline gap-2">
               <label className="font-medium text-muted-foreground text-xl mb-2">
                 Width
               </label>
