@@ -536,7 +536,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
   return (
     <div
-      className="relative flex-1 flex flex-col dark:bg-gray-900 overflow-hidden"
+      className="relative flex-1 flex flex-col overflow-hidden"
       style={{ background: canvasBackground }}
     >
       <CanvasTools

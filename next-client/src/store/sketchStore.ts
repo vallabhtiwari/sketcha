@@ -2,11 +2,11 @@ import { create } from "zustand";
 import { CanvasToolOptions } from "@/types";
 
 export const canvasBackgroundOptions = [
-  "#f8f8f8",
-  "#444444",
-  "#586071",
-  "#6a5c5c",
-  "#6a3c3c",
+  "#FFFBF8",
+  "#FFF0E6",
+  "#FFB366",
+  "#E8864A",
+  "#2A1D15",
 ];
 
 interface SketchState {

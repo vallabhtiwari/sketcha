@@ -36,7 +36,7 @@ export default function Dashboard({ user }: { user?: any }) {
     return (
       <div className="px-4 py-8 flex justify-center">
         <div className="w-full max-w-4xl space-y-10">
-          <h1 className="text-2xl font-bold text-center text-foreground">
+          <h1 className="text-2xl font-bold text-center text-primary">
             Welcome{user?.name ? `, ${user.name}` : ""} 🎨
           </h1>
 
@@ -63,9 +63,7 @@ export default function Dashboard({ user }: { user?: any }) {
           </form>
 
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold text-foreground">
-              Open Rooms
-            </h2>
+            <h2 className="text-xl font-semibold text-primary">Open Rooms</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {rooms.length > 0 ? (
                 rooms.map((room) => (

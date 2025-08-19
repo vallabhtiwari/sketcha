@@ -37,22 +37,26 @@ export const CanvasTools = ({
       <div className="absolute m-2 z-1 flex justify-start">
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="text-xl px-3 py-2 font-bold cursor-pointer bg-muted rounded-md border border-primary"
+          className="text-xl px-3 py-2 font-bold cursor-pointer bg-[rgb(255,251,248)] dark:bg-[rgb(26,20,16)] rounded-md border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
         >
           <Menu />
         </button>
       </div>
       {showMenu && (
-        <div className="absolute top-15 left-2 bg-white dark:bg-gray-800 p-4 shadow-md z-50 rounded-md border border-primary">
+        <div className="absolute top-15 left-2 p-4 shadow-md z-50 rounded-md border border-primary bg-[rgb(255,251,248)] dark:bg-[rgb(26,20,16)]">
           <div className="space-y-2">
             <div>
-              <span>Tool</span>
-              <div className="grid grid-cols-3 gap-2">
+              <span className="font-medium text-muted-foreground text-xl">
+                Tool
+              </span>
+              <div className="grid grid-cols-3 gap-2 mt-2">
                 {CanvasToolOptions.map((tool) => (
                   <div
                     key={tool}
                     className={`group w-10 h-8 p-2 border border-primary rounded-sm text-center cursor-pointer flex items-center justify-center ${
-                      selected === tool ? "bg-primary text-white" : ""
+                      selected === tool
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary"
                     }`}
                     onClick={() => {
                       onToolChange(tool);
@@ -88,19 +92,29 @@ export const CanvasTools = ({
               </div>
             </div>
             <div className="flex items-center">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="font-medium text-muted-foreground text-xl">
                 Color
               </label>
-              <input
-                type="color"
-                value={brushColor}
-                onChange={(e) => setBrushColor(e.target.value)}
-                className="ml-1 w-8 h-6 p-0 border-none outline-none"
-              />
+              <div className="relative ml-2 mt-2">
+                <div
+                  className="w-6 h-4 border border-primary cursor-pointer rounded-sm"
+                  style={{ backgroundColor: brushColor }}
+                  onClick={() =>
+                    document.getElementById("color-picker")?.click()
+                  }
+                />
+                <input
+                  id="color-picker"
+                  type="color"
+                  value={brushColor}
+                  onChange={(e) => setBrushColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="font-medium text-muted-foreground text-xl mb-2">
                 Width
               </label>
               <input
@@ -114,12 +128,14 @@ export const CanvasTools = ({
               <span>{brushWidth}</span>
             </div>
             <div>
-              <span>Canvas background</span>
-              <div className="flex justify-between">
+              <span className="font-medium text-muted-foreground text-xl">
+                Canvas background
+              </span>
+              <div className="flex justify-between mt-2">
                 {canvasBackgroundOptions.map((item) => (
                   <div
                     key={item}
-                    className="w-8 h-6 rounded-sm cursor-pointer border border-muted"
+                    className="w-8 h-6 rounded-sm cursor-pointer border border-border"
                     style={{ backgroundColor: item }}
                     title={item}
                     onClick={() => setCanvasBackground(item)}
@@ -127,10 +143,10 @@ export const CanvasTools = ({
                 ))}
               </div>
             </div>
-            <div>
+            <div className="mt-4">
               <button
                 onClick={onResetCanvas}
-                className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-white"
+                className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-muted-foreground"
               >
                 <Trash className="w-5 h-5" /> <span>Reset Canvas</span>
               </button>
