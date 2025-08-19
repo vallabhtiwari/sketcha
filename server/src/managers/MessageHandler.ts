@@ -20,13 +20,12 @@ export class MessageHandler {
   handleMessage(message: string, ws: CustomWebSocket) {
     try {
       const parsedMessage = JSON.parse(message) as Message;
-      const type = parsedMessage.type;
       switch (parsedMessage.type) {
         case "join":
           this.connectionManager.addClient(parsedMessage.roomId, ws);
           this.connectionManager.broadcast(parsedMessage, ws);
           break;
-        case "draw":
+        default:
           this.connectionManager.broadcast(parsedMessage, ws);
           break;
       }
