@@ -11,7 +11,6 @@ import {
   Minus,
   Trash,
 } from "lucide-react";
-import { useState } from "react";
 
 export const CanvasTools = ({
   onResetCanvas,
@@ -20,9 +19,9 @@ export const CanvasTools = ({
   onResetCanvas: () => void;
   onToolChange: (tool: CanvasToolOptions) => void;
 }) => {
-  const [selected, setSelected] = useState("pencil");
   const showMenu = useSketchStore((state) => state.showMenu);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
+  const selectedTool = useSketchStore((state) => state.selectedTool);
   const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
   const brushColor = useSketchStore((state) => state.brushColor);
   const setBrushColor = useSketchStore((state) => state.setBrushColor);
@@ -54,13 +53,12 @@ export const CanvasTools = ({
                   <div
                     key={tool}
                     className={`group aspect-square border border-primary rounded-sm cursor-pointer flex items-center justify-center ${
-                      selected === tool
+                      selectedTool === tool
                         ? "bg-primary text-primary-foreground"
                         : "text-primary"
                     }`}
                     onClick={() => {
                       onToolChange(tool);
-                      setSelected(tool);
                       setSelectedTool(tool);
                     }}
                   >

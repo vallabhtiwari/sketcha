@@ -21,6 +21,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const brushWidth = useSketchStore((state) => state.brushWidth);
   const canvasBackground = useSketchStore((state) => state.canvasBackground);
   const selectedTool = useSketchStore((state) => state.selectedTool);
+  const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
 
   const brushColorRef = useRef(brushColor);
@@ -68,6 +69,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             };
             ws.send(JSON.stringify(message));
           }
+          canvas.setActiveObject(e.path);
+          canvas.requestRenderAll();
+          setSelectedTool("select");
         }
       });
       canvas.on("mouse:down", (opt) => {
@@ -239,7 +243,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           }
         }
       });
-      canvas.on("mouse:up", () => {
+      canvas.on("mouse:up", (opt) => {
         if (
           selectedToolRef.current !== "pencil" &&
           (hasMovedRef.current ||
@@ -273,6 +277,12 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
               ws.send(JSON.stringify(message));
             }
           }
+        }
+        if (drawingRef.current) {
+          drawingRef.current.setCoords();
+          canvas.setActiveObject(drawingRef.current);
+          canvas.requestRenderAll();
+          setSelectedTool("select");
         }
         startPointRef.current = null;
         drawingRef.current = null;
