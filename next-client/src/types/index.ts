@@ -100,3 +100,10 @@ export type SignupResponse = {
 export type SigninResponse = {
   accessToken: string;
 };
+
+export type Theme = "light" | "dark";
+
+export type ThemeContextProps = {
+  theme: Theme;
+  toggleTheme: () => void;
+};
