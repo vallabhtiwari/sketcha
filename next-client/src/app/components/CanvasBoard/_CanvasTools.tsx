@@ -1,4 +1,11 @@
-import { useSketchStore, canvasBackgroundOptions } from "@/store/sketchStore";
+import { useTheme } from "@/providers/ThemeProvider";
+import {
+  useSketchStore,
+  canvasBackgroundOptions,
+  fontSizeOptions,
+  fontWeightOptions,
+  fontFamilyOptions,
+} from "@/store/sketchStore";
 import { CanvasToolOptions } from "@/types";
 import {
   Menu,
@@ -11,7 +18,9 @@ import {
   Minus,
   Trash,
   LockKeyhole,
+  CaseLower,
 } from "lucide-react";
+import { useEffect } from "react";
 
 export const CanvasTools = ({
   onResetCanvas,
@@ -33,6 +42,23 @@ export const CanvasTools = ({
   const setCanvasBackground = useSketchStore(
     (state) => state.setCanvasBackground
   );
+  const fontSize = useSketchStore((state) => state.fontSize);
+  const setFontSize = useSketchStore((state) => state.setFontSize);
+  const fontWeight = useSketchStore((state) => state.fontWeight);
+  const setFontWeight = useSketchStore((state) => state.setFontWeight);
+  const fontFamily = useSketchStore((state) => state.fontFamily);
+  const setFontFamily = useSketchStore((state) => state.setFontFamily);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (theme === "dark") {
+      setCanvasBackground(
+        canvasBackgroundOptions[canvasBackgroundOptions.length - 1]
+      );
+    } else {
+      setCanvasBackground(canvasBackgroundOptions[0]);
+    }
+  }, [theme]);
 
   return (
     <>
@@ -154,20 +180,119 @@ export const CanvasTools = ({
               </div>
             </div>
 
-            <div className="flex items-baseline gap-2">
-              <label className="font-medium text-muted-foreground text-xl mb-2">
-                Width
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={20}
-                value={brushWidth}
-                onChange={(e) => setBrushWidth(parseInt(e.target.value))}
-                className="w-full accent-primary m-0 p-0"
-              />
-              <span>{brushWidth}</span>
-            </div>
+            {selectedTool != "text" ? (
+              <div className="flex items-baseline gap-2">
+                <label className="font-medium text-muted-foreground text-xl mb-2">
+                  Width
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  value={brushWidth}
+                  onChange={(e) => setBrushWidth(parseInt(e.target.value))}
+                  className="w-full accent-primary m-0 p-0"
+                />
+                <span>{brushWidth}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-medium text-muted-foreground text-xl">
+                    Font Size
+                  </span>
+                </div>
+                <div className="flex justify-evenly items-baseline">
+                  {Object.keys(fontSizeOptions).map((size) => (
+                    <div
+                      key={size}
+                      className={`p-4 w-10 h-10 rounded-sm cursor-pointer border border-border flex items-center justify-center ${
+                        fontSize ===
+                        fontSizeOptions[size as keyof typeof fontSizeOptions]
+                          ? "bg-primary text-primary-foreground"
+                          : "text-primary"
+                      }`}
+                      onClick={() =>
+                        setFontSize(
+                          fontSizeOptions[size as keyof typeof fontSizeOptions]
+                        )
+                      }
+                      title={size}
+                    >
+                      <span>{size.charAt(0)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-medium text-muted-foreground text-xl">
+                    Font Weight
+                  </span>
+                </div>
+                <div className="flex justify-evenly items-baseline">
+                  {Object.keys(fontWeightOptions).map((weight) => (
+                    <div
+                      key={weight}
+                      className={`w-10 h-10 rounded-sm cursor-pointer border border-border flex items-center justify-center ${
+                        fontWeight ===
+                        fontWeightOptions[
+                          weight as keyof typeof fontWeightOptions
+                        ]
+                          ? "bg-primary text-primary-foreground"
+                          : "text-primary"
+                      }`}
+                      onClick={() =>
+                        setFontWeight(
+                          fontWeightOptions[
+                            weight as keyof typeof fontWeightOptions
+                          ]
+                        )
+                      }
+                      title={weight}
+                    >
+                      <CaseLower
+                        className="w-6 h-6"
+                        style={{
+                          strokeWidth:
+                            fontWeightOptions[
+                              weight as keyof typeof fontWeightOptions
+                            ] / 200,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-medium text-muted-foreground text-xl">
+                    Font Family
+                  </span>
+                </div>
+                <div className="flex justify-evenly items-baseline">
+                  {Object.keys(fontFamilyOptions).map((family) => (
+                    <div
+                      key={family}
+                      className={`w-10 h-10 rounded-sm cursor-pointer border border-border flex items-center justify-center ${
+                        fontFamily ===
+                        fontFamilyOptions[
+                          family as keyof typeof fontFamilyOptions
+                        ]
+                          ? "bg-primary text-primary-foreground"
+                          : "text-primary"
+                      }`}
+                      onClick={() =>
+                        setFontFamily(
+                          fontFamilyOptions[
+                            family as keyof typeof fontFamilyOptions
+                          ]
+                        )
+                      }
+                      title={family}
+                    >
+                      <span className={`text-sm font-${family}`}>Aa</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <div>
               <span className="font-medium text-muted-foreground text-xl">
                 Canvas background

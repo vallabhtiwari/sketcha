@@ -24,6 +24,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
   const isToolLocked = useSketchStore((state) => state.isToolLocked);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
+  const fontSize = useSketchStore((state) => state.fontSize);
+  const fontWeight = useSketchStore((state) => state.fontWeight);
+  const fontFamily = useSketchStore((state) => state.fontFamily);
 
   const brushColorRef = useRef(brushColor);
   const brushWidthRef = useRef(brushWidth);
@@ -40,6 +43,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const handleRedoRef = useRef<(() => void) | null>(null);
   const handleResetCanvasRef = useRef<(() => void) | null>(null);
   const isReceivingModificationRef = useRef(false);
+  const fontSizeRef = useRef(fontSize);
+  const fontWeightRef = useRef(fontWeight);
+  const fontFamilyRef = useRef(fontFamily);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -156,7 +162,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             left: x,
             top: y,
             width: 200,
-            fontSize: 20,
+            fontSize: fontSizeRef.current,
+            fontWeight: fontWeightRef.current,
+            fontFamily: fontFamilyRef.current,
             selectable: true,
             editable: true,
             padding: 6,
@@ -549,6 +557,18 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   useEffect(() => {
     isToolLockedRef.current = isToolLocked;
   }, [isToolLocked]);
+
+  useEffect(() => {
+    fontSizeRef.current = fontSize;
+  }, [fontSize]);
+
+  useEffect(() => {
+    fontWeightRef.current = fontWeight;
+  }, [fontWeight]);
+
+  useEffect(() => {
+    fontFamilyRef.current = fontFamily;
+  }, [fontFamily]);
 
   return (
     <div
