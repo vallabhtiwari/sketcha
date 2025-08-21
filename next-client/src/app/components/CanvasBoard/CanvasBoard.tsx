@@ -22,11 +22,13 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const canvasBackground = useSketchStore((state) => state.canvasBackground);
   const selectedTool = useSketchStore((state) => state.selectedTool);
   const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
+  const isToolLocked = useSketchStore((state) => state.isToolLocked);
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
 
   const brushColorRef = useRef(brushColor);
   const brushWidthRef = useRef(brushWidth);
   const selectedToolRef = useRef(selectedTool);
+  const isToolLockedRef = useRef(isToolLocked);
   const drawingRef = useRef<fabric.Object | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const undoStackRef = useRef<Action[]>([]);
@@ -69,9 +71,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             };
             ws.send(JSON.stringify(message));
           }
-          canvas.setActiveObject(e.path);
           canvas.requestRenderAll();
-          setSelectedTool("select");
+          if (!isToolLockedRef.current) {
+            setSelectedTool("select");
+          }
         }
       });
       canvas.on("mouse:down", (opt) => {
@@ -106,7 +109,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             objectID: objectIDRef.current,
           });
           canvas.add(line);
-          canvas.setActiveObject(line);
           drawingRef.current = line;
         }
         if (selectedToolRef.current === "rect") {
@@ -122,7 +124,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             objectID: objectIDRef.current,
           });
           canvas.add(rect);
-          canvas.setActiveObject(rect);
           drawingRef.current = rect;
         }
         if (selectedToolRef.current === "circle") {
@@ -141,7 +142,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             objectID: objectIDRef.current,
           });
           canvas.add(ellipse);
-          canvas.setActiveObject(ellipse);
           drawingRef.current = ellipse;
         }
         if (selectedToolRef.current === "text") {
@@ -171,7 +171,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           const isPlaceholderRef = { current: true };
 
           canvas.add(textbox);
-          canvas.setActiveObject(textbox);
           textbox.enterEditing();
           textbox.selectAll();
           canvas.renderAll();
@@ -282,7 +281,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           drawingRef.current.setCoords();
           canvas.setActiveObject(drawingRef.current);
           canvas.requestRenderAll();
-          setSelectedTool("select");
+          if (!isToolLockedRef.current) {
+            setSelectedTool("select");
+          }
         }
         startPointRef.current = null;
         drawingRef.current = null;
@@ -544,6 +545,10 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.isDrawingMode = false;
     }
   }, [selectedTool]);
+
+  useEffect(() => {
+    isToolLockedRef.current = isToolLocked;
+  }, [isToolLocked]);
 
   return (
     <div

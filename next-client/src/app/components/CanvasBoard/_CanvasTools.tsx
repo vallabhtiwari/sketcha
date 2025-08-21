@@ -10,6 +10,7 @@ import {
   MousePointer,
   Minus,
   Trash,
+  LockKeyhole,
 } from "lucide-react";
 
 export const CanvasTools = ({
@@ -23,6 +24,8 @@ export const CanvasTools = ({
   const setShowMenu = useSketchStore((state) => state.setShowMenu);
   const selectedTool = useSketchStore((state) => state.selectedTool);
   const setSelectedTool = useSketchStore((state) => state.setSelectedTool);
+  const isToolLocked = useSketchStore((state) => state.isToolLocked);
+  const setIsToolLocked = useSketchStore((state) => state.setIsToolLocked);
   const brushColor = useSketchStore((state) => state.brushColor);
   const setBrushColor = useSketchStore((state) => state.setBrushColor);
   const brushWidth = useSketchStore((state) => state.brushWidth);
@@ -48,8 +51,20 @@ export const CanvasTools = ({
               <span className="font-medium text-muted-foreground text-xl">
                 Tool
               </span>
-              <div className="grid grid-cols-3 gap-3 mt-2 w-full">
-                {CanvasToolOptions.map((tool) => (
+              <div
+                className="mt-2 w-full gap-3"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gridTemplateRows: "repeat(3, 1fr)",
+                  gridTemplateAreas: `
+                    "tool1 tool2 tool3"
+                    "tool4 tool5 tool6" 
+                    "tool7 lock lock"
+                  `,
+                }}
+              >
+                {CanvasToolOptions.map((tool, index) => (
                   <div
                     key={tool}
                     className={`group aspect-square border border-primary rounded-sm cursor-pointer flex items-center justify-center ${
@@ -57,6 +72,7 @@ export const CanvasTools = ({
                         ? "bg-primary text-primary-foreground"
                         : "text-primary"
                     }`}
+                    style={{ gridArea: `tool${index + 1}` }}
                     onClick={() => {
                       onToolChange(tool);
                       setSelectedTool(tool);
@@ -87,6 +103,33 @@ export const CanvasTools = ({
                     </div>
                   </div>
                 ))}
+
+                <div
+                  className={`group border border-primary rounded-sm cursor-pointer flex items-center justify-center gap-2 px-3 ${
+                    isToolLocked
+                      ? "bg-primary text-primary-foreground"
+                      : "text-primary"
+                  }`}
+                  style={{
+                    gridArea: "lock",
+                  }}
+                  onClick={() => setIsToolLocked(!isToolLocked)}
+                >
+                  <LockKeyhole className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    {isToolLocked ? "Locked" : "Lock Tool"}
+                  </span>
+                  <div
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1
+                 whitespace-nowrap bg-gray-800 text-white text-xs
+                 rounded px-2 py-1 opacity-0 group-hover:opacity-100
+                 transition pointer-events-none z-10"
+                  >
+                    {isToolLocked
+                      ? "Unlock tool selection"
+                      : "Lock current tool selection"}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex items-baseline">
@@ -144,7 +187,7 @@ export const CanvasTools = ({
             <div className="mt-4">
               <button
                 onClick={onResetCanvas}
-                className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-muted-foreground"
+                className="px-3 py-2 font-bold cursor-pointer rounded-md border border-primary flex items-center gap-2 text-primary-foreground"
               >
                 <Trash className="w-5 h-5" /> <span>Reset Canvas</span>
               </button>
