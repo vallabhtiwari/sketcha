@@ -15,11 +15,13 @@ interface SketchState {
   brushWidth: number;
   canvasBackground: string;
   selectedTool: CanvasToolOptions;
+  isToolLocked: boolean;
   setBrushColor: (color: string) => void;
   setBrushWidth: (width: number) => void;
   setCanvasBackground: (color: string) => void;
   setSelectedTool: (tool: CanvasToolOptions) => void;
   setShowMenu: (show: boolean) => void;
+  setIsToolLocked: (locked: boolean) => void;
 }
 
 export const useSketchStore = create<SketchState>((set) => ({
@@ -28,9 +30,11 @@ export const useSketchStore = create<SketchState>((set) => ({
   brushWidth: 3,
   canvasBackground: canvasBackgroundOptions[0],
   selectedTool: "pencil",
+  isToolLocked: false,
   setBrushColor: (color) => set({ brushColor: color }),
   setBrushWidth: (width) => set({ brushWidth: width }),
   setCanvasBackground: (color) => set({ canvasBackground: color }),
   setSelectedTool: (tool) => set({ selectedTool: tool }),
   setShowMenu: (show) => set({ showMenu: show }),
+  setIsToolLocked: (locked) => set({ isToolLocked: locked }),
 }));
