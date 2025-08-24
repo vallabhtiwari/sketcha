@@ -47,9 +47,17 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const fontWeightRef = useRef(fontWeight);
   const fontFamilyRef = useRef(fontFamily);
 
+  const isPanningRef = useRef(false);
+  const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
+
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
       ref.current = canvas;
+      const canvasElement = canvas.getElement();
+
+      // Configure canvas for panning and zooming
+      canvas.selection = true;
+      canvas.preserveObjectStacking = true;
 
       const resizeCanvas = () => {
         const el = canvas.lowerCanvasEl;
@@ -63,6 +71,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
       // Track pencil drawing for undo
       canvas.on("path:created", (e) => {
+        if (isPanningRef.current) return;
         if (e.path) {
           e.path.set("objectID", crypto.randomUUID());
           undoStackRef.current.push({ type: "add", object: e.path });
@@ -84,6 +93,22 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       });
       canvas.on("mouse:down", (opt) => {
+        const evt = opt.e;
+
+        if (
+          evt instanceof MouseEvent &&
+          evt.button === 0 &&
+          (window as any).spaceKeyPressed?.current
+        ) {
+          isPanningRef.current = true;
+          canvas.selection = false;
+          lastPanPointRef.current = { x: evt.clientX, y: evt.clientY };
+          canvas.defaultCursor = "grabbing";
+          canvas.setCursor("grabbing");
+          evt.preventDefault();
+          return;
+        }
+
         objectIDRef.current = crypto.randomUUID();
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
@@ -204,6 +229,29 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       });
       canvas.on("mouse:move", (opt) => {
+        if (isPanningRef.current && lastPanPointRef.current) {
+          const evt = opt.e as MouseEvent;
+          const deltaX = evt.clientX - lastPanPointRef.current.x;
+          const deltaY = evt.clientY - lastPanPointRef.current.y;
+
+          const vpt = canvas.viewportTransform!.slice() as [
+            number,
+            number,
+            number,
+            number,
+            number,
+            number
+          ];
+          vpt[4] += deltaX; // translateX
+          vpt[5] += deltaY; // translateY
+
+          canvas.setViewportTransform(vpt);
+
+          lastPanPointRef.current = { x: evt.clientX, y: evt.clientY };
+          evt.preventDefault();
+          return;
+        }
+
         const pointer = canvas.getScenePoint(opt.e);
         const { x, y } = pointer;
         if (!startPointRef.current || !drawingRef.current) return;
@@ -251,6 +299,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         }
       });
       canvas.on("mouse:up", (opt) => {
+        // Handle end of panning
+        if (isPanningRef.current) {
+          isPanningRef.current = false;
+          canvas.selection = true;
+          canvas.defaultCursor = "default";
+          canvas.setCursor("default");
+          lastPanPointRef.current = null;
+          return;
+        }
         if (
           selectedToolRef.current !== "pencil" &&
           (hasMovedRef.current ||
@@ -529,8 +586,43 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         handleRedo();
       }
     };
+
+    // Space key handling for panning
+    const spaceKeyPressedRef = { current: false };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !spaceKeyPressedRef.current) {
+        spaceKeyPressedRef.current = true;
+        const canvasElement = ref.current?.getElement();
+        if (canvasElement) {
+          canvasElement.style.cursor = "grab";
+        }
+        e.preventDefault(); // Prevent page scroll
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        spaceKeyPressedRef.current = false;
+        const canvasElement = ref.current?.getElement();
+        if (canvasElement) {
+          canvasElement.style.cursor = "default";
+        }
+      }
+    };
+
+    // Make space key state available to canvas events
+    (window as any).spaceKeyPressed = spaceKeyPressedRef;
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", handleKeydown);
+      delete (window as any).spaceKeyPressed;
+    };
   }, []);
 
   useEffect(() => {
