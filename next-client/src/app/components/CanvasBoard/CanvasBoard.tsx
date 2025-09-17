@@ -97,18 +97,18 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
         if (
           evt instanceof MouseEvent &&
-          evt.button === 0 &&
           (window as any).spaceKeyPressed?.current
         ) {
           isPanningRef.current = true;
           canvas.selection = false;
+          canvas.isDrawingMode = false;
+
           lastPanPointRef.current = { x: evt.clientX, y: evt.clientY };
           canvas.defaultCursor = "grabbing";
           canvas.setCursor("grabbing");
           evt.preventDefault();
           return;
         }
-
         objectIDRef.current = crypto.randomUUID();
         const pointer = canvas.getScenePoint(opt.e);
         const clickedTarget = opt.target;
@@ -306,6 +306,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.defaultCursor = "default";
           canvas.setCursor("default");
           lastPanPointRef.current = null;
+          if (selectedToolRef.current === "pencil") {
+            canvas.isDrawingMode = true;
+          }
           return;
         }
         if (
@@ -539,8 +542,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             });
             if (obj) {
               isReceivingModificationRef.current = true;
-              console.log("object modified", obj.get("type"));
-              obj.set(message.properties);
+                            obj.set(message.properties);
               obj.setCoords();
               obj.set("selectable", true);
               canvas.renderAll();
@@ -592,6 +594,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !spaceKeyPressedRef.current) {
+const canvas = ref.current;
+
+        if (canvas) {
+          const activeObject = canvas.getActiveObject();
+          if (activeObject && activeObject.type === "textbox") {
+            if ((activeObject as fabric.Textbox).isEditing) {
+              return;
+            }
+          }
+          if (selectedToolRef.current === "pencil") {
+            canvas.isDrawingMode = false;
+          }
+        }
+
         spaceKeyPressedRef.current = true;
         const canvasElement = ref.current?.getElement();
         if (canvasElement) {
