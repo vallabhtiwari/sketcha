@@ -9,7 +9,8 @@ export type Message =
   | EraseMessage
   | ResetCanvasMessage
   | TextUpdateMessage
-  | ObjectModifiedMessage;
+  | ObjectModifiedMessage
+  | ViewportUpdateMessage;
 
 export type DrawMessage = {
   type: "draw";
@@ -58,6 +59,12 @@ export type ObjectModifiedMessage = {
     originX?: string;
     originY?: string;
   };
+};
+
+export type ViewportUpdateMessage = {
+  type: "viewport-update";
+  roomId: RoomId;
+  transform: [number, number, number, number, number, number];
 };
 
 export type CustomWebSocket = WebSocket & { user: JwtPayload; roomId?: RoomId };

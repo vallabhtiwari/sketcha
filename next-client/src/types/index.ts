@@ -51,13 +51,20 @@ export type ObjectModifiedMessage = {
   };
 };
 
+export type ViewportUpdateMessage = {
+  type: "viewport-update";
+  roomId: RoomId;
+  transform: [number, number, number, number, number, number];
+};
+
 export type Message =
   | JoinMessage
   | DrawMessage
   | EraseMessage
   | ResetCanvasMessage
   | TextUpdateMessage
-  | ObjectModifiedMessage;
+  | ObjectModifiedMessage
+  | ViewportUpdateMessage;
 
 export type JoinRoomProps = {
   onJoin: (roomId: RoomId) => void;

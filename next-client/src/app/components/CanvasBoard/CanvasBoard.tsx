@@ -11,6 +11,7 @@ import type {
   ResetCanvasMessage,
   TextUpdateMessage,
   ObjectModifiedMessage,
+  ViewportUpdateMessage,
 } from "@/types";
 import { useSketchStore } from "@/store/sketchStore";
 import { CanvasTools } from "./_CanvasTools";
@@ -309,6 +310,21 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           if (selectedToolRef.current === "pencil") {
             canvas.isDrawingMode = true;
           }
+if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: ViewportUpdateMessage = {
+              type: "viewport-update",
+              roomId,
+              transform: canvas.viewportTransform!.slice() as [
+                number,
+                number,
+                number,
+                number,
+                number,
+                number
+              ],
+            };
+            ws.send(JSON.stringify(message));
+          }
           return;
         }
         if (
@@ -548,6 +564,16 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
               canvas.renderAll();
               isReceivingModificationRef.current = false;
             }
+          }
+          if (message.type === "viewport-update") {
+            if (isPanningRef.current) return;
+            canvas.setViewportTransform(message.transform);
+            zoomLevelRef.current = canvas.getZoom();
+            if (canvas.freeDrawingBrush) {
+              canvas.freeDrawingBrush.width =
+                brushWidthRef.current / zoomLevelRef.current;
+            }
+            // canvas.renderAll();
           }
         } catch (err) {
           console.error("Failed to load remote drawing:", err);
