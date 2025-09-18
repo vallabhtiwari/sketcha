@@ -51,6 +51,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
   const zoomLevelRef = useRef(1);
+  const zoomDebounceRef = useRef<number | null>(null);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -393,6 +394,28 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         if (canvas.freeDrawingBrush) {
           canvas.freeDrawingBrush.width = brushWidthRef.current / zoom;
         }
+
+        if (zoomDebounceRef.current !== null) {
+          clearTimeout(zoomDebounceRef.current);
+        }
+        zoomDebounceRef.current = window.setTimeout(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const message: ViewportUpdateMessage = {
+              type: "viewport-update",
+              roomId,
+              transform: canvas.viewportTransform!.slice() as [
+                number,
+                number,
+                number,
+                number,
+                number,
+                number
+              ],
+            };
+            ws.send(JSON.stringify(message));
+          }
+          zoomDebounceRef.current = null;
+        }, 250);
 
         evt.preventDefault();
         evt.stopPropagation();
