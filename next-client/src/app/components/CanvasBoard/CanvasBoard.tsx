@@ -50,6 +50,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
 
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
+  const zoomLevelRef = useRef(1);
 
   const onLoad = useCallback(
     (canvas: fabric.Canvas) => {
@@ -77,7 +78,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           e.path.set("objectID", crypto.randomUUID());
           undoStackRef.current.push({ type: "add", object: e.path });
           if (ws && ws.readyState === WebSocket.OPEN) {
-            console.log("sending draw message in path created");
             const pathData = e.path.toObject();
             pathData.objectID = e.path.get("objectID");
             const message: DrawMessage = {
@@ -136,7 +136,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         if (selectedToolRef.current === "line") {
           const line = new fabric.Line([x, y, x, y], {
             stroke: brushColorRef.current,
-            strokeWidth: brushWidthRef.current,
+            strokeWidth: brushWidthRef.current / zoomLevelRef.current,
             selectable: true,
             objectID: objectIDRef.current,
           });
@@ -151,7 +151,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             height: 0,
             fill: "transparent",
             stroke: brushColorRef.current,
-            strokeWidth: brushWidthRef.current,
+            strokeWidth: brushWidthRef.current / zoomLevelRef.current,
             selectable: true,
             objectID: objectIDRef.current,
           });
@@ -166,7 +166,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             ry: 0,
             fill: "transparent",
             stroke: brushColorRef.current,
-            strokeWidth: brushWidthRef.current,
+            strokeWidth: brushWidthRef.current / zoomLevelRef.current,
             originX: "center",
             originY: "center",
             selectable: true,
@@ -187,8 +187,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           const textbox = new fabric.Textbox("Type here", {
             left: x,
             top: y,
-            width: 200,
-            fontSize: fontSizeRef.current,
+            width: 200 / zoomLevelRef.current,
+            fontSize: fontSizeRef.current / zoomLevelRef.current,
             fontWeight: fontWeightRef.current,
             fontFamily: fontFamilyRef.current,
             selectable: true,
@@ -310,7 +310,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           if (selectedToolRef.current === "pencil") {
             canvas.isDrawingMode = true;
           }
-if (ws && ws.readyState === WebSocket.OPEN) {
+          if (ws && ws.readyState === WebSocket.OPEN) {
             const message: ViewportUpdateMessage = {
               type: "viewport-update",
               roomId,
@@ -372,6 +372,30 @@ if (ws && ws.readyState === WebSocket.OPEN) {
         startPointRef.current = null;
         drawingRef.current = null;
         hasMovedRef.current = false;
+      });
+
+      canvas.on("mouse:wheel", (opt) => {
+        const evt = opt.e;
+        const delta = evt.deltaY;
+        let zoom = canvas.getZoom();
+
+        // Calculate new zoom (limit between 0.1 and 5)
+        zoom *= 0.999 ** delta;
+        zoom = Math.max(0.1, Math.min(5, zoom));
+
+        // Zoom to the point where the mouse is
+        canvas.zoomToPoint(
+          new fabric.Point(opt.e.offsetX, opt.e.offsetY),
+          zoom
+        );
+
+        zoomLevelRef.current = zoom;
+        if (canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush.width = brushWidthRef.current / zoom;
+        }
+
+        evt.preventDefault();
+        evt.stopPropagation();
       });
 
       canvas.on("object:modified", (opt) => {
@@ -558,7 +582,7 @@ if (ws && ws.readyState === WebSocket.OPEN) {
             });
             if (obj) {
               isReceivingModificationRef.current = true;
-                            obj.set(message.properties);
+              obj.set(message.properties);
               obj.setCoords();
               obj.set("selectable", true);
               canvas.renderAll();
@@ -620,7 +644,7 @@ if (ws && ws.readyState === WebSocket.OPEN) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !spaceKeyPressedRef.current) {
-const canvas = ref.current;
+        const canvas = ref.current;
 
         if (canvas) {
           const activeObject = canvas.getActiveObject();
@@ -673,7 +697,7 @@ const canvas = ref.current;
     const canvas = ref.current;
     if (canvas && canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = brushColor;
-      canvas.freeDrawingBrush.width = brushWidth;
+      canvas.freeDrawingBrush.width = brushWidth / zoomLevelRef.current;
     }
   }, [brushColor, brushWidth]);
 
