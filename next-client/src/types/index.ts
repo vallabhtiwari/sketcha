@@ -83,6 +83,7 @@ export const CanvasToolOptions = [
   "circle",
   "text",
   "eraser",
+  "pan",
 ] as const;
 
 export type CanvasToolOptions = (typeof CanvasToolOptions)[number];

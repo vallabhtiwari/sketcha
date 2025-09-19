@@ -19,6 +19,8 @@ import {
   Trash,
   LockKeyhole,
   CaseLower,
+  Hand,
+  LockKeyholeOpen,
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -86,7 +88,7 @@ export const CanvasTools = ({
                   gridTemplateAreas: `
                     "tool1 tool2 tool3"
                     "tool4 tool5 tool6" 
-                    "tool7 lock lock"
+                    "tool7 tool8 lock"
                   `,
                 }}
               >
@@ -100,6 +102,9 @@ export const CanvasTools = ({
                     }`}
                     style={{ gridArea: `tool${index + 1}` }}
                     onClick={() => {
+                      if (tool === "select" || tool === "pan") {
+                        setIsToolLocked(false);
+                      }
                       onToolChange(tool);
                       setSelectedTool(tool);
                     }}
@@ -118,6 +123,8 @@ export const CanvasTools = ({
                       <MousePointer />
                     ) : tool === "line" ? (
                       <Minus />
+                    ) : tool === "pan" ? (
+                      <Hand />
                     ) : null}
                     <div
                       className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1
@@ -131,20 +138,45 @@ export const CanvasTools = ({
                 ))}
 
                 <div
-                  className={`group border border-primary rounded-sm cursor-pointer flex items-center justify-center gap-2 px-3 ${
-                    isToolLocked
-                      ? "bg-primary text-primary-foreground"
-                      : "text-primary"
+                  className={`group border rounded-sm ${
+                    selectedTool !== "pan" && selectedTool !== "select"
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed"
+                  } flex items-center justify-center gap-2 px-3 ${
+                    selectedTool === "pan" || selectedTool === "select"
+                      ? "bg-muted text-muted-foreground border-muted-foreground"
+                      : isToolLocked
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "text-primary border-primary"
                   }`}
                   style={{
                     gridArea: "lock",
                   }}
-                  onClick={() => setIsToolLocked(!isToolLocked)}
+                  onClick={() => {
+                    if (selectedTool === "pan" || selectedTool === "select") {
+                      return;
+                    }
+                    setIsToolLocked(!isToolLocked);
+                  }}
                 >
-                  <LockKeyhole className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    {isToolLocked ? "Locked" : "Lock Tool"}
-                  </span>
+                  {isToolLocked ? (
+                    <LockKeyholeOpen
+                      className={
+                        selectedTool === "pan" || selectedTool === "select"
+                          ? "text-muted-foreground"
+                          : "inherit"
+                      }
+                    />
+                  ) : (
+                    <LockKeyhole
+                      className={
+                        selectedTool === "pan" || selectedTool === "select"
+                          ? "text-muted-foreground"
+                          : "inherit"
+                      }
+                    />
+                  )}
+
                   <div
                     className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1
                  whitespace-nowrap bg-gray-800 text-white text-xs

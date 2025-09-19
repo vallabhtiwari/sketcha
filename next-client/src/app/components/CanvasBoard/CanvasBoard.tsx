@@ -98,8 +98,9 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         const evt = opt.e;
 
         if (
-          evt instanceof MouseEvent &&
-          (window as any).spaceKeyPressed?.current
+          (evt instanceof MouseEvent &&
+            (window as any).spaceKeyPressed?.current) ||
+          (selectedToolRef.current === "pan" && evt instanceof MouseEvent)
         ) {
           isPanningRef.current = true;
           canvas.selection = false;
@@ -304,10 +305,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
         // Handle end of panning
         if (isPanningRef.current) {
           isPanningRef.current = false;
-          canvas.selection = true;
-          canvas.defaultCursor = "default";
-          canvas.setCursor("default");
           lastPanPointRef.current = null;
+          if (selectedToolRef.current !== "pan") {
+            canvas.selection = true;
+            canvas.defaultCursor = "default";
+            canvas.setCursor("default");
+          } else {
+            canvas.defaultCursor = "grab";
+            canvas.setCursor("grab");
+          }
           if (selectedToolRef.current === "pencil") {
             canvas.isDrawingMode = true;
           }
@@ -368,6 +374,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.requestRenderAll();
           if (!isToolLockedRef.current) {
             setSelectedTool("select");
+            canvas.selection = true;
           }
         }
         startPointRef.current = null;
@@ -646,8 +653,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     if (!canvas) return;
     if (tool === "select" || tool === "eraser") {
       canvas.defaultCursor = "default";
+    } else if (tool === "pan") {
+      canvas.defaultCursor = "grab";
     } else {
       canvas.defaultCursor = "crosshair";
+    }
+    if (tool === "select") {
+      canvas.selection = true;
+    } else {
+      canvas.selection = false;
     }
   };
   useEffect(() => {
