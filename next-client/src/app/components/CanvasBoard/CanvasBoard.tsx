@@ -91,6 +91,7 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           canvas.requestRenderAll();
           if (!isToolLockedRef.current) {
             setSelectedTool("select");
+            canvas.selection = true;
           }
         }
       });
@@ -134,12 +135,17 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             };
             ws.send(JSON.stringify(message));
           }
+          if (!isToolLockedRef.current) {
+            setSelectedTool("select");
+            canvas.selection = true;
+          }
         }
         if (selectedToolRef.current === "line") {
           const line = new fabric.Line([x, y, x, y], {
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current / zoomLevelRef.current,
-            selectable: true,
+            selectable: false,
+            evented: false,
             objectID: objectIDRef.current,
           });
           canvas.add(line);
@@ -154,7 +160,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             fill: "transparent",
             stroke: brushColorRef.current,
             strokeWidth: brushWidthRef.current / zoomLevelRef.current,
-            selectable: true,
+            selectable: false,
+            evented: false,
             objectID: objectIDRef.current,
           });
           canvas.add(rect);
@@ -171,8 +178,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             strokeWidth: brushWidthRef.current / zoomLevelRef.current,
             originX: "center",
             originY: "center",
-            selectable: true,
-            evented: true,
+            selectable: false,
+            evented: false,
             objectID: objectIDRef.current,
           });
           canvas.add(ellipse);
@@ -193,7 +200,8 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
             fontSize: fontSizeRef.current / zoomLevelRef.current,
             fontWeight: fontWeightRef.current,
             fontFamily: fontFamilyRef.current,
-            selectable: true,
+            selectable: false,
+            evented: false,
             editable: true,
             padding: 6,
             borderColor: "#4F46E5",
@@ -210,7 +218,6 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
           textbox.enterEditing();
           textbox.selectAll();
           canvas.renderAll();
-
           textbox.on("changed", () => {
             if (isPlaceholderRef.current) {
               textbox.text = ""; // Clear the placeholder
@@ -674,9 +681,37 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
     }
     if (tool === "select") {
       canvas.selection = true;
+      canvas.getObjects().forEach((obj) => {
+        obj.set("selectable", true);
+        obj.set("evented", true);
+        if (obj.type === "textbox") {
+          obj.set("editable", true);
+        }
+      });
     } else {
       canvas.selection = false;
+      if (tool !== "eraser") {
+        canvas.getObjects().forEach((obj) => {
+          if (obj.type === "textbox") {
+            obj.set("selectable", true);
+            obj.set("evented", true);
+            obj.set("editable", true);
+          } else {
+            obj.set("selectable", false);
+            obj.set("evented", false);
+          }
+        });
+      } else {
+        canvas.getObjects().forEach((obj) => {
+          obj.set("selectable", true);
+          obj.set("evented", true);
+          if (obj.type === "textbox") {
+            obj.set("editable", true);
+          }
+        });
+      }
     }
+    canvas.requestRenderAll();
   };
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -760,6 +795,15 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
       canvas.isDrawingMode = true;
     } else {
       canvas.isDrawingMode = false;
+    }
+    if (selectedTool === "select") {
+      canvas.getObjects().forEach((obj) => {
+        obj.set("selectable", true);
+        obj.set("evented", true);
+        if (obj.type === "textbox") {
+          obj.set("editable", true);
+        }
+      });
     }
   }, [selectedTool]);
 
