@@ -574,6 +574,20 @@ export const CanvasBoard = ({ ws, roomId }: CanvasBoardProps) => {
               if (message.payload.objectID) {
                 fabricObj.set("objectID", message.payload.objectID);
               }
+              if (fabricObj.get("type") === "textbox") {
+                let textBox = fabricObj as fabric.Textbox;
+                textBox.on("changed", () => {
+                  if (ws && ws.readyState === WebSocket.OPEN) {
+                    const message: TextUpdateMessage = {
+                      type: "text-update",
+                      roomId,
+                      objectID: fabricObj.get("objectID"),
+                      text: textBox.text,
+                    };
+                    ws.send(JSON.stringify(message));
+                  }
+                });
+              }
               canvas.add(fabricObj);
               canvas.renderAll();
             } else {
